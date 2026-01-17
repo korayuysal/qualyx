@@ -1,0 +1,99 @@
+# Test Execution: {{rule.name}}
+
+## Context
+- **Application:** {{app.name}}
+- **URL:** {{url}}
+- **Test ID:** {{rule.id}}
+- **Severity:** {{uppercase rule.severity}}
+{{#if environment}}
+- **Environment:** {{environment}}
+{{/if}}
+
+{{#if credentials}}
+## Credentials
+{{#each credentials}}
+- **{{@key}}:** {{this}}
+{{/each}}
+{{/if}}
+
+{{#if previousAttempt}}
+## Previous Attempt Failed
+**Error:** {{previousAttempt.error}}
+
+{{#if previousAttempt.screenshot}}
+A screenshot from the failure point has been captured. Please analyze it to understand what went wrong.
+{{/if}}
+
+{{#if previousAttempt.domSnippet}}
+### Relevant DOM at Failure Point
+```html
+{{previousAttempt.domSnippet}}
+```
+{{/if}}
+
+**Instructions:** Please try a different approach or be more specific with element selectors.
+{{/if}}
+
+## Test Instructions
+
+Execute the following test steps using browser automation (Playwright):
+
+{{#each rule.steps}}
+{{stepNumber @index}}. {{formatStep this}}
+{{/each}}
+
+{{#if rule.validations}}
+## Validations to Check
+
+After completing the steps above, verify the following:
+
+{{#each rule.validations}}
+- {{this}}
+{{/each}}
+{{/if}}
+
+## Important Guidelines
+
+1. **Wait for page loads:** Always wait for navigation and content to load before interacting.
+2. **Be resilient:** If an exact selector doesn't work, try alternative approaches (text content, aria-labels, etc.).
+3. **Take screenshots:** Capture screenshots on failure or when explicitly requested.
+4. **Handle dynamic content:** Wait for dynamic elements to appear before interacting.
+5. **Don't make assumptions:** If something is unclear, note it in the response rather than guessing.
+
+{{#if app.auth}}
+## Authentication Details
+- **Auth Type:** {{app.auth.type}}
+{{#if app.auth.login_url}}
+- **Login URL:** {{app.auth.login_url}}
+{{/if}}
+{{/if}}
+
+## Expected Output Format
+
+After executing the test, respond with a JSON object in the following format:
+
+```json
+{
+  "status": "passed" | "failed",
+  "steps": [
+    {
+      "step": "Description of step",
+      "status": "passed" | "failed",
+      "timestamp": "ISO timestamp",
+      "duration": 1234,
+      "error": "Error message if failed"
+    }
+  ],
+  "validations": [
+    {
+      "validation": "What was validated",
+      "passed": true | false,
+      "details": "Additional details"
+    }
+  ],
+  "error": "Overall error message if test failed",
+  "screenshot": "base64 encoded screenshot if captured"
+}
+```
+
+**Begin test execution now.**

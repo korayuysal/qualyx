@@ -1,0 +1,111 @@
+# Qualyx Configuration - Travel App Example
+# This demonstrates a comprehensive configuration for a flight booking application
+
+organization:
+  name: TravelCo
+  defaults:
+    timeout: 30000
+    retries: 2
+
+apps:
+  - name: flight-booking
+    url: https://flights.travelco.com
+    environments:
+      production: https://flights.travelco.com
+      staging: https://staging.flights.travelco.com
+    auth:
+      type: form-login
+      credentials:
+        email: ${TEST_USER_EMAIL}
+        password: ${TEST_USER_PASSWORD}
+
+    rules:
+      - id: search-flights
+        name: Search for flights
+        severity: critical
+        steps:
+          - Login to the application
+          - Navigate to search page
+          - Search for flights from "New York" to "Los Angeles" for tomorrow
+          - Verify that search results appear with at least 3 flight options
+        validations:
+          - Results list is visible
+          - Each result shows price and duration
+        on_failure:
+          - screenshot
+
+      - id: complete-booking
+        name: Complete a flight booking
+        severity: critical
+        steps:
+          - Login to the application
+          - Search for the cheapest flight from NYC to LA
+          - Select the first available flight
+          - Fill passenger details with test data
+          - Proceed to payment page
+          - action: Verify payment form
+            hint: Do NOT submit payment - just verify the form appears
+            caution: Never submit actual payment
+        validations:
+          - Payment form is visible
+          - Total price is displayed
+        test_data:
+          passenger:
+            first_name: John
+            last_name: Doe
+            email: john.doe@test.com
+
+      - id: filter-by-price
+        name: Filter flights by price
+        severity: high
+        steps:
+          - Navigate to search results page
+          - Apply price filter (under $500)
+          - Verify filtered results all show prices under $500
+        validations:
+          - All visible flights are under $500
+          - Filter indicator is shown
+
+      - id: seat-selection
+        name: Seat selection works
+        severity: medium
+        steps:
+          - Start a booking flow
+          - Reach the seat selection step
+          - Select a window seat
+          - Verify seat is marked as selected
+        validations:
+          - Selected seat is highlighted
+          - Seat selection is saved
+
+  - name: hotel-booking
+    url: https://hotels.travelco.com
+    environments:
+      production: https://hotels.travelco.com
+      staging: https://staging.hotels.travelco.com
+
+    rules:
+      - id: hotel-search
+        name: Search for hotels
+        severity: critical
+        steps:
+          - Navigate to hotel search
+          - Enter destination "San Francisco"
+          - Select check-in date as next week
+          - Select check-out date as day after
+          - Search for hotels
+        validations:
+          - Hotel results are displayed
+          - Prices are shown per night
+
+      - id: hotel-details
+        name: View hotel details
+        severity: high
+        steps:
+          - Search for hotels in New York
+          - Click on the first hotel result
+          - Verify hotel details page loads
+        validations:
+          - Hotel name is displayed
+          - Room options are shown
+          - Photo gallery is visible
