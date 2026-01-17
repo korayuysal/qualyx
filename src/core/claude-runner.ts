@@ -1,8 +1,4 @@
 import { spawn } from 'node:child_process';
-import { writeFileSync, unlinkSync, mkdirSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-import { randomUUID } from 'node:crypto';
 import type {
   ClaudeRunnerOptions,
   ClaudeResponse,
@@ -23,42 +19,11 @@ export class ClaudeRunnerError extends Error {
 }
 
 const DEFAULT_OPTIONS: ClaudeRunnerOptions = {
-  timeout: 30000,
+  timeout: 60000,
   headless: true,
   retries: 2,
   dryRun: false,
 };
-
-/**
- * Create a temporary directory for prompt files.
- */
-function ensureTempDir(): string {
-  const tempDir = join(tmpdir(), 'qualyx');
-  mkdirSync(tempDir, { recursive: true });
-  return tempDir;
-}
-
-/**
- * Write prompt content to a temporary file.
- */
-function writePromptFile(content: string): string {
-  const tempDir = ensureTempDir();
-  const fileName = `prompt-${randomUUID()}.md`;
-  const filePath = join(tempDir, fileName);
-  writeFileSync(filePath, content, 'utf-8');
-  return filePath;
-}
-
-/**
- * Clean up a temporary prompt file.
- */
-function cleanupPromptFile(filePath: string): void {
-  try {
-    unlinkSync(filePath);
-  } catch {
-    // Ignore cleanup errors
-  }
-}
 
 /**
  * Parse JSON response from Claude output.
@@ -104,18 +69,12 @@ function parseClaudeResponse(output: string): ClaudeResponse {
 /**
  * Build the Claude Code CLI command arguments.
  */
-function buildClaudeArgs(promptFile: string, options: ClaudeRunnerOptions): string[] {
-  const args: string[] = [
+function buildClaudeArgs(): string[] {
+  return [
     '--print',  // Non-interactive mode
+    '--output-format', 'text',  // Use text format (we'll parse JSON from output)
+    '--dangerously-skip-permissions',  // Skip permission prompts for automation
   ];
-
-  // Add the prompt file
-  args.push('--prompt-file', promptFile);
-
-  // Request JSON output format
-  args.push('--output-format', 'json');
-
-  return args;
 }
 
 /**
@@ -137,22 +96,16 @@ export async function runClaude(
     };
   }
 
-  // Write prompt to temporary file
-  const promptFile = writePromptFile(prompt);
-
-  try {
-    const args = buildClaudeArgs(promptFile, opts);
-    const output = await executeClaudeProcess(args, opts.timeout);
-    return parseClaudeResponse(output);
-  } finally {
-    cleanupPromptFile(promptFile);
-  }
+  const args = buildClaudeArgs();
+  const output = await executeClaudeProcess(args, prompt, opts.timeout);
+  return parseClaudeResponse(output);
 }
 
 /**
  * Execute the Claude Code CLI process and capture output.
+ * Uses stdin to pass the prompt for better handling of long prompts.
  */
-async function executeClaudeProcess(args: string[], timeout: number): Promise<string> {
+async function executeClaudeProcess(args: string[], prompt: string, timeout: number): Promise<string> {
   return new Promise((resolve, reject) => {
     let stdout = '';
     let stderr = '';
@@ -174,6 +127,10 @@ async function executeClaudeProcess(args: string[], timeout: number): Promise<st
         reject(new ClaudeRunnerError(`Claude execution timed out after ${timeout}ms`));
       }
     }, timeout);
+
+    // Write prompt to stdin and close it
+    claude.stdin.write(prompt);
+    claude.stdin.end();
 
     claude.stdout.on('data', (data: Buffer) => {
       stdout += data.toString();

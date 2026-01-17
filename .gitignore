@@ -34,3 +34,9 @@ coverage/
 # Qualyx output
 .qualyx/
 qualyx-reports/
+
+# Playwright
+.playwright-mcp/
+
+# Test files
+test-config.yml
