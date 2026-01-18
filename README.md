@@ -94,6 +94,8 @@ apps:
 | `url` | Base URL |
 | `environments` | Named URL mappings |
 | `auth` | Authentication config |
+| `screenshots` | Screenshot capture settings |
+| `setup` | Setup steps run once before rules |
 | `rules` | Test rules array |
 
 #### Rules
@@ -108,6 +110,8 @@ apps:
 | `validations` | Expected outcomes |
 | `on_failure` | Actions on failure |
 | `test_data` | Dynamic test data |
+| `schedule` | Cron expression for scheduled runs |
+| `skip_setup` | Skip app setup for this rule |
 
 ### Step Syntax
 
@@ -126,6 +130,55 @@ steps:
   - action: Fill payment form
     hint: Use test card 4242424242424242
     caution: Do NOT click submit
+```
+
+### Setup Blocks
+
+Setup steps run once per app before any rules execute:
+
+```yaml
+apps:
+  - name: my-app
+    url: https://myapp.com
+    setup:
+      - Login to the application
+      - Navigate to dashboard
+    rules:
+      - id: test-1
+        name: Test dashboard features
+        skip_setup: false  # Default: use setup
+        steps:
+          - Check dashboard widgets
+```
+
+### Screenshot Configuration
+
+Configure screenshot capture:
+
+```yaml
+apps:
+  - name: my-app
+    screenshots:
+      on_failure: true   # Capture on failure (default)
+      on_success: false  # Capture on success
+      each_step: false   # Capture after each step
+```
+
+### Scheduling
+
+Schedule tests with cron expressions:
+
+```yaml
+rules:
+  - id: health-check
+    name: Health Check
+    schedule: "*/30 * * * *"  # Every 30 minutes
+    steps:
+      - Verify homepage loads
+
+  - id: daily-smoke
+    name: Daily Smoke Test
+    schedule: "0 7 * * *"  # Daily at 7 AM
 ```
 
 ### Environment Variables
@@ -208,6 +261,57 @@ qualyx history --limit 20
 qualyx history --failed
 qualyx history --format json
 ```
+
+### `qualyx schedule`
+
+Manage scheduled test rules.
+
+```bash
+qualyx schedule list              # List all scheduled rules
+qualyx schedule cron              # Generate crontab entries
+qualyx schedule cron --output crontab.txt
+qualyx schedule github            # Generate GitHub Actions workflow
+qualyx schedule github --output .github/workflows/qualyx.yml
+```
+
+## Integrations
+
+### Slack Notifications
+
+Send test results to Slack:
+
+```yaml
+notifications:
+  slack:
+    webhook_url: ${SLACK_WEBHOOK_URL}
+    on_failure: true
+    on_success: false
+    mention_on_failure:
+      - U123456789  # Slack user IDs
+```
+
+### Jira Integration
+
+Automatically create issues for failed tests:
+
+```yaml
+integrations:
+  jira:
+    base_url: https://company.atlassian.net
+    email: ${JIRA_EMAIL}
+    api_token: ${JIRA_API_TOKEN}
+    project_key: QA
+    create_issues: true
+    issue_type: Bug
+    labels:
+      - qualyx
+      - automated-test
+```
+
+Features:
+- Creates issues on test failures
+- Prevents duplicate issues (checks for existing open issues)
+- Adds comments to existing issues on re-failure
 
 ## Output
 
