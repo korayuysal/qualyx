@@ -240,6 +240,9 @@ qualyx run --verbose              # Detailed output
 qualyx run --report               # Generate HTML report
 qualyx run --retries 3            # Override retry count
 qualyx run --timeout 60000        # Override timeout
+qualyx run --parallel             # Run tests in parallel
+qualyx run --max-parallel 5       # Limit concurrent tests
+qualyx run --collect-metrics      # Collect performance metrics
 ```
 
 ### `qualyx report`
@@ -290,6 +293,53 @@ notifications:
       - U123456789  # Slack user IDs
 ```
 
+### Email Notifications
+
+Send test results via email:
+
+```yaml
+notifications:
+  email:
+    smtp_host: smtp.gmail.com
+    smtp_port: 587
+    smtp_secure: false
+    smtp_user: ${SMTP_USER}
+    smtp_pass: ${SMTP_PASS}
+    from: qa@company.com
+    to:
+      - team@company.com
+      - alerts@company.com
+    on_failure: true
+    on_success: false
+    subject_prefix: "[Qualyx]"
+```
+
+Features:
+- HTML and plain text email formats
+- Configurable triggers (on_failure, on_success)
+- Customizable subject prefix
+- Link to HTML report (if generated)
+
+### Microsoft Teams Notifications
+
+Send test results to Microsoft Teams:
+
+```yaml
+notifications:
+  teams:
+    webhook_url: ${TEAMS_WEBHOOK_URL}
+    on_failure: true
+    on_success: false
+    mention_on_failure:
+      - user@company.com
+```
+
+Features:
+- Rich Adaptive Card messages
+- User mentions on failure
+- Summary with pass/fail counts
+- Link to HTML report
+
 ### Jira Integration
 
 Automatically create issues for failed tests:
@@ -312,6 +362,36 @@ Features:
 - Creates issues on test failures
 - Prevents duplicate issues (checks for existing open issues)
 - Adds comments to existing issues on re-failure
+
+## Parallel Execution
+
+Run tests in parallel to speed up test suites:
+
+```bash
+qualyx run --parallel              # Run tests in parallel (default: 3 concurrent)
+qualyx run --parallel --max-parallel 5  # Limit to 5 concurrent tests
+```
+
+Notes:
+- Setup blocks run sequentially before parallel test execution
+- Results are ordered in original test order
+- Useful for independent tests that don't share state
+
+## Performance Metrics
+
+Collect performance metrics during test execution:
+
+```bash
+qualyx run --collect-metrics
+```
+
+Metrics collected:
+- **Page Load Time** - Time from navigation start to load event
+- **DOM Content Loaded** - Time until DOM is fully parsed
+- **First Contentful Paint (FCP)** - Time until first content renders
+- **Largest Contentful Paint (LCP)** - Time until largest content element renders
+- **Total Request Count** - Number of network requests
+- **Total Transfer Size** - Total bytes transferred
 
 ## Output
 

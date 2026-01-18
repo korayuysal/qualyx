@@ -5,6 +5,8 @@ import { ConsoleReporter, printDryRunPreview } from '../../reporters/console.js'
 import { generateHtmlReport } from '../../reporters/html.js';
 import { saveRunResult } from '../../storage/results.js';
 import { sendSlackNotification } from '../../integrations/slack.js';
+import { sendEmailNotification } from '../../integrations/email.js';
+import { sendTeamsNotification } from '../../integrations/teams.js';
 import { processJiraIssues } from '../../integrations/jira.js';
 import type { RunOptions, RunResult, QualyxConfig } from '../../types/index.js';
 
@@ -13,10 +15,13 @@ export interface RunCommandOptions extends RunOptions {
   report?: boolean;
   reportDir?: string;
   save?: boolean;
+  parallel?: boolean;
+  maxParallel?: number;
+  collectMetrics?: boolean;
 }
 
 /**
- * Process integrations (Slack notifications, Jira issues) after a test run.
+ * Process integrations (notifications, Jira issues) after a test run.
  */
 async function processIntegrations(
   runResult: RunResult,
@@ -31,6 +36,28 @@ async function processIntegrations(
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       console.log(chalk.yellow(`  Warning: Slack notification failed: ${errorMessage}`));
+    }
+  }
+
+  // Send email notification
+  if (config.notifications?.email) {
+    try {
+      await sendEmailNotification(runResult, config, reportPath);
+      console.log(chalk.gray('  Email notification sent'));
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.log(chalk.yellow(`  Warning: Email notification failed: ${errorMessage}`));
+    }
+  }
+
+  // Send Teams notification
+  if (config.notifications?.teams) {
+    try {
+      await sendTeamsNotification(runResult, config, reportPath);
+      console.log(chalk.gray('  Teams notification sent'));
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.log(chalk.yellow(`  Warning: Teams notification failed: ${errorMessage}`));
     }
   }
 
@@ -78,6 +105,9 @@ export async function runRun(options: RunCommandOptions = {}): Promise<void> {
       verbose: options.verbose,
       retries: options.retries,
       timeout: options.timeout,
+      parallel: options.parallel,
+      maxParallel: options.maxParallel,
+      collectMetrics: options.collectMetrics,
     });
 
     // Handle dry-run mode

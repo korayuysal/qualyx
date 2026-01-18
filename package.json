@@ -1,6 +1,6 @@
 {
   "name": "qualyx",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "AI-powered QA automation platform using Claude Code CLI and Playwright",
   "type": "module",
   "main": "dist/index.js",
@@ -30,12 +30,14 @@
     "chalk": "^5.4.1",
     "commander": "^12.1.0",
     "handlebars": "^4.7.8",
+    "nodemailer": "^6.9.16",
     "yaml": "^2.7.0",
     "zod": "^3.24.1"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.12",
     "@types/node": "^22.10.5",
+    "@types/nodemailer": "^6.4.17",
     "tsx": "^4.19.2",
     "typescript": "^5.7.3",
     "vitest": "^2.1.8"

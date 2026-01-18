@@ -71,6 +71,26 @@ export const SlackConfigSchema = z.object({
   mention_on_failure: z.array(z.string()).optional(), // User IDs to mention on failure
 });
 
+export const EmailConfigSchema = z.object({
+  smtp_host: z.string().min(1),
+  smtp_port: z.number().default(587),
+  smtp_secure: z.boolean().default(false), // true for 465, false for other ports
+  smtp_user: z.string().min(1),
+  smtp_pass: z.string().min(1),
+  from: z.string().email(),
+  to: z.array(z.string().email()).min(1),
+  on_failure: z.boolean().default(true),
+  on_success: z.boolean().default(false),
+  subject_prefix: z.string().default('[Qualyx]'),
+});
+
+export const TeamsConfigSchema = z.object({
+  webhook_url: z.string().url(),
+  on_failure: z.boolean().default(true),
+  on_success: z.boolean().default(false),
+  mention_on_failure: z.array(z.string()).optional(), // User emails to mention
+});
+
 export const JiraConfigSchema = z.object({
   base_url: z.string().url(),
   email: z.string().email(),
@@ -84,6 +104,8 @@ export const JiraConfigSchema = z.object({
 
 export const NotificationsSchema = z.object({
   slack: SlackConfigSchema.optional(),
+  email: EmailConfigSchema.optional(),
+  teams: TeamsConfigSchema.optional(),
 });
 
 export const IntegrationsSchema = z.object({
@@ -109,6 +131,8 @@ export type App = z.infer<typeof AppSchema>;
 export type OrganizationDefaults = z.infer<typeof OrganizationDefaultsSchema>;
 export type Organization = z.infer<typeof OrganizationSchema>;
 export type SlackConfig = z.infer<typeof SlackConfigSchema>;
+export type EmailConfig = z.infer<typeof EmailConfigSchema>;
+export type TeamsConfig = z.infer<typeof TeamsConfigSchema>;
 export type JiraConfig = z.infer<typeof JiraConfigSchema>;
 export type Notifications = z.infer<typeof NotificationsSchema>;
 export type Integrations = z.infer<typeof IntegrationsSchema>;
@@ -120,6 +144,16 @@ export type QualyxConfig = z.infer<typeof QualyxConfigSchema>;
 
 export type TestStatus = 'passed' | 'failed' | 'skipped' | 'pending';
 
+export interface PerformanceMetrics {
+  pageLoadTime?: number;       // Time to load the page (ms)
+  domContentLoaded?: number;   // DOMContentLoaded event time (ms)
+  firstContentfulPaint?: number; // First Contentful Paint (ms)
+  largestContentfulPaint?: number; // Largest Contentful Paint (ms)
+  timeToInteractive?: number;  // Time to Interactive (ms)
+  totalRequestCount?: number;  // Number of network requests
+  totalTransferSize?: number;  // Total bytes transferred
+}
+
 export interface StepResult {
   step: string;
   status: TestStatus;
@@ -127,6 +161,7 @@ export interface StepResult {
   duration: number;
   error?: string;
   screenshot?: string;
+  metrics?: PerformanceMetrics; // Performance metrics for this step
 }
 
 export interface ValidationResult {
@@ -149,6 +184,7 @@ export interface TestResult {
   error?: string;
   screenshot?: string;
   retryCount: number;
+  metrics?: PerformanceMetrics; // Aggregated performance metrics for the test
 }
 
 export interface RunResult {
@@ -197,6 +233,7 @@ export interface PromptContext {
     screenshot?: string;
     domSnippet?: string;
   };
+  collectMetrics?: boolean;
 }
 
 // ============================================================
@@ -257,6 +294,9 @@ export interface RunOptions {
   verbose?: boolean;
   retries?: number;
   timeout?: number;
+  parallel?: boolean;         // Run tests in parallel
+  maxParallel?: number;       // Maximum concurrent tests (default: 3)
+  collectMetrics?: boolean;   // Collect performance metrics
 }
 
 export interface ListOptions {

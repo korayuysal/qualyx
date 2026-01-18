@@ -88,6 +88,26 @@ Screenshots should capture the full viewport and clearly show the state of the p
 {{/if}}
 {{/if}}
 
+{{#if collectMetrics}}
+## Performance Metrics Collection
+
+**REQUIRED:** Collect the following performance metrics during test execution:
+
+- **Page Load Time:** Time from navigation start to load event
+- **DOM Content Loaded:** Time until DOM is fully parsed
+- **First Contentful Paint (FCP):** Time until first content renders
+- **Largest Contentful Paint (LCP):** Time until largest content element renders
+- **Total Request Count:** Number of network requests made
+- **Total Transfer Size:** Total bytes transferred
+
+Use the browser's Performance API to collect these metrics:
+```javascript
+const timing = performance.timing;
+const entries = performance.getEntriesByType('paint');
+const resources = performance.getEntriesByType('resource');
+```
+{{/if}}
+
 ## Expected Output Format
 
 After executing the test, respond with a JSON object in the following format:
@@ -112,7 +132,15 @@ After executing the test, respond with a JSON object in the following format:
     }
   ],
   "error": "Overall error message if test failed",
-  "screenshot": "base64 encoded screenshot if captured"
+  "screenshot": "base64 encoded screenshot if captured"{{#if collectMetrics}},
+  "performanceMetrics": {
+    "pageLoadTime": 1234,
+    "domContentLoaded": 567,
+    "firstContentfulPaint": 234,
+    "largestContentfulPaint": 890,
+    "totalRequestCount": 45,
+    "totalTransferSize": 1234567
+  }{{/if}}
 }
 ```
 

@@ -68,7 +68,6 @@ export class Executor {
 
     const runId = randomUUID();
     const startedAt = new Date().toISOString();
-    const results: TestResult[] = [];
 
     // Get tests to run based on filters
     const testsToRun = this.getTestsToRun();
@@ -76,38 +75,10 @@ export class Executor {
     // Notify run start
     this.callbacks.onRunStart?.(testsToRun.length);
 
-    // Execute each test sequentially
-    for (const { app, rule } of testsToRun) {
-      // Run setup if needed and not skipped
-      if (!rule.skip_setup && app.setup?.length && !this.setupCompleted.has(app.name)) {
-        await this.runSetup(app);
-      }
-
-      // Check if setup failed for this app
-      if (this.setupErrors.has(app.name) && !rule.skip_setup) {
-        // Skip test if setup failed
-        const skipResult: TestResult = {
-          ruleId: rule.id,
-          ruleName: rule.name,
-          appName: app.name,
-          status: 'skipped',
-          severity: rule.severity,
-          startedAt: new Date().toISOString(),
-          completedAt: new Date().toISOString(),
-          duration: 0,
-          steps: [],
-          validations: [],
-          error: `Setup failed: ${this.setupErrors.get(app.name)}`,
-          retryCount: 0,
-        };
-        results.push(skipResult);
-        this.callbacks.onTestComplete?.(skipResult);
-        continue;
-      }
-
-      const result = await this.executeTest(app, rule);
-      results.push(result);
-    }
+    // Execute tests (parallel or sequential)
+    const results = this.options.parallel
+      ? await this.executeParallel(testsToRun)
+      : await this.executeSequential(testsToRun);
 
     const completedAt = new Date().toISOString();
     const duration = new Date(completedAt).getTime() - new Date(startedAt).getTime();
@@ -129,6 +100,120 @@ export class Executor {
     this.callbacks.onRunComplete?.(runResult);
 
     return runResult;
+  }
+
+  /**
+   * Execute tests sequentially.
+   */
+  private async executeSequential(testsToRun: Array<{ app: App; rule: Rule }>): Promise<TestResult[]> {
+    const results: TestResult[] = [];
+
+    for (const { app, rule } of testsToRun) {
+      // Run setup if needed and not skipped
+      if (!rule.skip_setup && app.setup?.length && !this.setupCompleted.has(app.name)) {
+        await this.runSetup(app);
+      }
+
+      // Check if setup failed for this app
+      if (this.setupErrors.has(app.name) && !rule.skip_setup) {
+        const skipResult = this.createSkipResult(app, rule, `Setup failed: ${this.setupErrors.get(app.name)}`);
+        results.push(skipResult);
+        this.callbacks.onTestComplete?.(skipResult);
+        continue;
+      }
+
+      const result = await this.executeTest(app, rule);
+      results.push(result);
+    }
+
+    return results;
+  }
+
+  /**
+   * Execute tests in parallel with concurrency limit.
+   */
+  private async executeParallel(testsToRun: Array<{ app: App; rule: Rule }>): Promise<TestResult[]> {
+    const maxParallel = this.options.maxParallel ?? 3;
+    const results: TestResult[] = [];
+    const pending: Array<Promise<void>> = [];
+
+    // First, run all setups sequentially to avoid race conditions
+    const appsWithSetup = new Set<string>();
+    for (const { app, rule } of testsToRun) {
+      if (!rule.skip_setup && app.setup?.length && !appsWithSetup.has(app.name)) {
+        appsWithSetup.add(app.name);
+        if (!this.setupCompleted.has(app.name)) {
+          await this.runSetup(app);
+        }
+      }
+    }
+
+    // Create a queue of tests
+    const queue = [...testsToRun];
+    let running = 0;
+
+    const executeNext = async (): Promise<void> => {
+      if (queue.length === 0) return;
+
+      const test = queue.shift();
+      if (!test) return;
+
+      const { app, rule } = test;
+      running++;
+
+      try {
+        // Check if setup failed for this app
+        if (this.setupErrors.has(app.name) && !rule.skip_setup) {
+          const skipResult = this.createSkipResult(app, rule, `Setup failed: ${this.setupErrors.get(app.name)}`);
+          results.push(skipResult);
+          this.callbacks.onTestComplete?.(skipResult);
+        } else {
+          const result = await this.executeTest(app, rule);
+          results.push(result);
+        }
+      } finally {
+        running--;
+        // Start next test if there are more in queue
+        if (queue.length > 0 && running < maxParallel) {
+          pending.push(executeNext());
+        }
+      }
+    };
+
+    // Start initial batch of parallel tests
+    const initialBatch = Math.min(maxParallel, queue.length);
+    for (let i = 0; i < initialBatch; i++) {
+      pending.push(executeNext());
+    }
+
+    // Wait for all tests to complete
+    await Promise.all(pending);
+
+    // Sort results to maintain original order
+    const orderMap = new Map(testsToRun.map(({ rule }, i) => [rule.id, i]));
+    results.sort((a, b) => (orderMap.get(a.ruleId) ?? 0) - (orderMap.get(b.ruleId) ?? 0));
+
+    return results;
+  }
+
+  /**
+   * Create a skip result for a test.
+   */
+  private createSkipResult(app: App, rule: Rule, error: string): TestResult {
+    return {
+      ruleId: rule.id,
+      ruleName: rule.name,
+      appName: app.name,
+      status: 'skipped',
+      severity: rule.severity,
+      startedAt: new Date().toISOString(),
+      completedAt: new Date().toISOString(),
+      duration: 0,
+      steps: [],
+      validations: [],
+      error,
+      retryCount: 0,
+    };
   }
 
   /**
@@ -238,6 +323,7 @@ export class Executor {
       rule,
       environment: this.options.environment,
       credentials: this.resolveCredentials(app),
+      collectMetrics: this.options.collectMetrics,
     };
   }
 

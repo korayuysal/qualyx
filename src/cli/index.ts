@@ -5,7 +5,7 @@ import { runList } from './commands/list.js';
 import { runRun } from './commands/run.js';
 import { runScheduleList, runScheduleCron, runScheduleGithub } from './commands/schedule.js';
 
-const VERSION = '0.2.0';
+const VERSION = '0.3.0';
 
 export function createCli(): Command {
   const program = new Command();
@@ -58,6 +58,9 @@ export function createCli(): Command {
     .option('-v, --verbose', 'Show detailed output')
     .option('--retries <number>', 'Number of retries on failure', parseInt)
     .option('--timeout <ms>', 'Timeout per test in milliseconds', parseInt)
+    .option('--parallel', 'Run tests in parallel')
+    .option('--max-parallel <number>', 'Maximum number of parallel tests', parseInt)
+    .option('--collect-metrics', 'Collect performance metrics during tests')
     .option('--report', 'Generate HTML report')
     .option('--report-dir <path>', 'Directory for HTML reports', './qualyx-reports')
     .option('--no-save', 'Do not save results to history')
@@ -72,6 +75,9 @@ export function createCli(): Command {
         verbose: options.verbose,
         retries: options.retries,
         timeout: options.timeout,
+        parallel: options.parallel,
+        maxParallel: options.maxParallel,
+        collectMetrics: options.collectMetrics,
         report: options.report,
         reportDir: options.reportDir,
         save: options.save,
