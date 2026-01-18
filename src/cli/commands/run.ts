@@ -4,13 +4,52 @@ import { Executor } from '../../core/executor.js';
 import { ConsoleReporter, printDryRunPreview } from '../../reporters/console.js';
 import { generateHtmlReport } from '../../reporters/html.js';
 import { saveRunResult } from '../../storage/results.js';
-import type { RunOptions } from '../../types/index.js';
+import { sendSlackNotification } from '../../integrations/slack.js';
+import { processJiraIssues } from '../../integrations/jira.js';
+import type { RunOptions, RunResult, QualyxConfig } from '../../types/index.js';
 
 export interface RunCommandOptions extends RunOptions {
   config?: string;
   report?: boolean;
   reportDir?: string;
   save?: boolean;
+}
+
+/**
+ * Process integrations (Slack notifications, Jira issues) after a test run.
+ */
+async function processIntegrations(
+  runResult: RunResult,
+  config: QualyxConfig,
+  reportPath?: string
+): Promise<void> {
+  // Send Slack notification
+  if (config.notifications?.slack) {
+    try {
+      await sendSlackNotification(runResult, config, reportPath);
+      console.log(chalk.gray('  Slack notification sent'));
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.log(chalk.yellow(`  Warning: Slack notification failed: ${errorMessage}`));
+    }
+  }
+
+  // Process Jira issues for failures
+  if (config.integrations?.jira && runResult.failed > 0) {
+    try {
+      const jiraResults = await processJiraIssues(runResult, config);
+      if (jiraResults.length > 0) {
+        console.log(chalk.gray('  Jira issues processed:'));
+        for (const result of jiraResults) {
+          const action = result.action === 'created' ? 'Created' : 'Updated';
+          console.log(chalk.gray(`    ${action}: ${result.issueKey} (${result.testId})`));
+        }
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.log(chalk.yellow(`  Warning: Jira integration failed: ${errorMessage}`));
+    }
+  }
 }
 
 export async function runRun(options: RunCommandOptions = {}): Promise<void> {
@@ -77,9 +116,10 @@ export async function runRun(options: RunCommandOptions = {}): Promise<void> {
     }
 
     // Generate HTML report if requested
+    let reportPath: string | undefined;
     if (options.report) {
       try {
-        const reportPath = generateHtmlReport(
+        reportPath = generateHtmlReport(
           runResult,
           { outputDir: options.reportDir || './qualyx-reports' },
           config.organization.name
@@ -90,6 +130,9 @@ export async function runRun(options: RunCommandOptions = {}): Promise<void> {
         console.log(chalk.yellow(`  Warning: Could not generate HTML report`));
       }
     }
+
+    // Send notifications and process integrations
+    await processIntegrations(runResult, config, reportPath);
 
     // Exit with appropriate code
     if (runResult.failed > 0) {

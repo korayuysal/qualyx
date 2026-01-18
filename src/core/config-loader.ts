@@ -257,3 +257,45 @@ export function getEnvironmentUrl(app: { url: string; environments?: Record<stri
 export function getConfigDir(filePath: string): string {
   return dirname(filePath);
 }
+
+/**
+ * Get all scheduled rules from the configuration.
+ */
+export function getScheduledRules(config: QualyxConfig): Array<{
+  appName: string;
+  ruleId: string;
+  ruleName: string;
+  schedule: string;
+  severity: string;
+}> {
+  const scheduledRules: Array<{
+    appName: string;
+    ruleId: string;
+    ruleName: string;
+    schedule: string;
+    severity: string;
+  }> = [];
+
+  for (const app of config.apps) {
+    for (const rule of app.rules) {
+      if (rule.schedule) {
+        scheduledRules.push({
+          appName: app.name,
+          ruleId: rule.id,
+          ruleName: rule.name,
+          schedule: rule.schedule,
+          severity: rule.severity,
+        });
+      }
+    }
+  }
+
+  return scheduledRules;
+}
+
+/**
+ * Get setup steps for an app.
+ */
+export function getAppSetup(app: { setup?: string[] }): string[] {
+  return app.setup || [];
+}

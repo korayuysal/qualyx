@@ -9,7 +9,7 @@ import type {
   PromptContext,
   ClaudeResponse,
 } from '../types/index.js';
-import { getApp, getRule, getEnvironmentUrl } from './config-loader.js';
+import { getApp, getRule, getEnvironmentUrl, getAppSetup } from './config-loader.js';
 import { buildExecutionPrompt, buildDryRunPrompt } from './prompt-builder.js';
 import { runClaude, isClaudeAvailable } from './claude-runner.js';
 import {
@@ -26,6 +26,8 @@ export interface ExecutorCallbacks {
   onTestRetry?: (app: App, rule: Rule, attempt: number, maxRetries: number) => void;
   onRunStart?: (totalTests: number) => void;
   onRunComplete?: (result: RunResult) => void;
+  onSetupStart?: (app: App) => void;
+  onSetupComplete?: (app: App, success: boolean, error?: string) => void;
 }
 
 export interface ExecutorOptions extends RunOptions {
@@ -39,11 +41,15 @@ export class Executor {
   private config: QualyxConfig;
   private options: ExecutorOptions;
   private callbacks: ExecutorCallbacks;
+  private setupCompleted: Map<string, boolean>;
+  private setupErrors: Map<string, string>;
 
   constructor(config: QualyxConfig, options: ExecutorOptions = {}) {
     this.config = config;
     this.options = options;
     this.callbacks = options.callbacks || {};
+    this.setupCompleted = new Map();
+    this.setupErrors = new Map();
   }
 
   /**
@@ -72,6 +78,33 @@ export class Executor {
 
     // Execute each test sequentially
     for (const { app, rule } of testsToRun) {
+      // Run setup if needed and not skipped
+      if (!rule.skip_setup && app.setup?.length && !this.setupCompleted.has(app.name)) {
+        await this.runSetup(app);
+      }
+
+      // Check if setup failed for this app
+      if (this.setupErrors.has(app.name) && !rule.skip_setup) {
+        // Skip test if setup failed
+        const skipResult: TestResult = {
+          ruleId: rule.id,
+          ruleName: rule.name,
+          appName: app.name,
+          status: 'skipped',
+          severity: rule.severity,
+          startedAt: new Date().toISOString(),
+          completedAt: new Date().toISOString(),
+          duration: 0,
+          steps: [],
+          validations: [],
+          error: `Setup failed: ${this.setupErrors.get(app.name)}`,
+          retryCount: 0,
+        };
+        results.push(skipResult);
+        this.callbacks.onTestComplete?.(skipResult);
+        continue;
+      }
+
       const result = await this.executeTest(app, rule);
       results.push(result);
     }
@@ -216,6 +249,61 @@ export class Executor {
       return {};
     }
     return app.auth.credentials;
+  }
+
+  /**
+   * Run setup steps for an app.
+   */
+  private async runSetup(app: App): Promise<void> {
+    const setupSteps = getAppSetup(app);
+    if (!setupSteps.length) {
+      this.setupCompleted.set(app.name, true);
+      return;
+    }
+
+    // Notify setup start
+    this.callbacks.onSetupStart?.(app);
+
+    // Create a virtual rule for setup
+    const setupRule: Rule = {
+      id: `__setup__${app.name}`,
+      name: `Setup for ${app.name}`,
+      severity: 'critical',
+      steps: setupSteps,
+      validations: [],
+    };
+
+    const timeout = this.config.organization.defaults?.timeout ?? 30000;
+    const context: PromptContext = {
+      app,
+      rule: setupRule,
+      environment: this.options.environment,
+      credentials: this.resolveCredentials(app),
+    };
+
+    try {
+      const prompt = this.options.dryRun
+        ? buildDryRunPrompt(context)
+        : buildExecutionPrompt(context);
+
+      const result = await runClaude(prompt, {
+        timeout,
+        dryRun: this.options.dryRun,
+        headless: !this.options.headed,
+      });
+
+      if (result.status === 'passed') {
+        this.setupCompleted.set(app.name, true);
+        this.callbacks.onSetupComplete?.(app, true);
+      } else {
+        this.setupErrors.set(app.name, result.error || 'Setup failed');
+        this.callbacks.onSetupComplete?.(app, false, result.error);
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown setup error';
+      this.setupErrors.set(app.name, errorMessage);
+      this.callbacks.onSetupComplete?.(app, false, errorMessage);
+    }
   }
 
   /**

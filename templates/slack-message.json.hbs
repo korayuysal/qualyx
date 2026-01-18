@@ -1,0 +1,93 @@
+{
+  "text": "{{#if hasFailed}}:x:{{else}}:white_check_mark:{{/if}} Qualyx Test Run {{status}}: {{passed}}/{{totalTests}} passed",
+  "blocks": [
+    {
+      "type": "header",
+      "text": {
+        "type": "plain_text",
+        "text": "{{#if hasFailed}}:x:{{else}}:white_check_mark:{{/if}} Qualyx Test Run {{status}}",
+        "emoji": true
+      }
+    },
+    {
+      "type": "section",
+      "fields": [
+        {
+          "type": "mrkdwn",
+          "text": "*Organization:*\n{{organizationName}}"
+        },
+        {
+          "type": "mrkdwn",
+          "text": "*Environment:*\n{{environment}}"
+        },
+        {
+          "type": "mrkdwn",
+          "text": "*Total Tests:*\n{{totalTests}}"
+        },
+        {
+          "type": "mrkdwn",
+          "text": "*Pass Rate:*\n{{passRate}}%"
+        }
+      ]
+    },
+    {
+      "type": "section",
+      "fields": [
+        {
+          "type": "mrkdwn",
+          "text": ":white_check_mark: *Passed:* {{passed}}"
+        },
+        {
+          "type": "mrkdwn",
+          "text": ":x: *Failed:* {{failed}}"
+        },
+        {
+          "type": "mrkdwn",
+          "text": ":arrow_right: *Skipped:* {{skipped}}"
+        },
+        {
+          "type": "mrkdwn",
+          "text": ":clock1: *Duration:* {{duration}}"
+        }
+      ]
+    }{{#if hasFailed}},
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "*Failed Tests:*\n{{#each failedTests}}• *{{ruleName}}* ({{appName}}): {{error}}\n{{/each}}"
+      }
+    }{{/if}}{{#if reportUrl}},
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": ":page_facing_up: *View Full Report:*"
+      },
+      "accessory": {
+        "type": "button",
+        "text": {
+          "type": "plain_text",
+          "text": "Open Report",
+          "emoji": true
+        },
+        "url": "{{reportUrl}}"
+      }
+    }{{/if}},
+    {
+      "type": "context",
+      "elements": [
+        {
+          "type": "mrkdwn",
+          "text": "Run ID: {{runId}} | {{timestamp}}"
+        }
+      ]
+    }
+  ],
+  "attachments": [
+    {
+      "color": "{{#if hasFailed}}#e74c3c{{else}}#2ecc71{{/if}}",
+      "fallback": "Test run {{status}}: {{passed}}/{{totalTests}} passed"
+    }
+  ]
+}

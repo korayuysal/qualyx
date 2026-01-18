@@ -81,7 +81,31 @@ export class ConsoleReporter {
       onTestComplete: this.onTestComplete.bind(this),
       onTestRetry: this.onTestRetry.bind(this),
       onRunComplete: this.onRunComplete.bind(this),
+      onSetupStart: this.onSetupStart.bind(this),
+      onSetupComplete: this.onSetupComplete.bind(this),
     };
+  }
+
+  /**
+   * Called when setup starts for an app.
+   */
+  private onSetupStart(app: App): void {
+    console.log(chalk.cyan(`  Setting up: ${app.name}`));
+  }
+
+  /**
+   * Called when setup completes for an app.
+   */
+  private onSetupComplete(app: App, success: boolean, error?: string): void {
+    if (success) {
+      console.log(chalk.green(`  ✓ Setup complete: ${app.name}`));
+    } else {
+      console.log(chalk.red(`  ✗ Setup failed: ${app.name}`));
+      if (error) {
+        console.log(chalk.red(`    Error: ${error}`));
+      }
+    }
+    console.log();
   }
 
   /**

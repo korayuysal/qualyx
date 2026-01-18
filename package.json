@@ -1,6 +1,6 @@
 {
   "name": "qualyx",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "AI-powered QA automation platform using Claude Code CLI and Playwright",
   "type": "module",
   "main": "dist/index.js",

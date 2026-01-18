@@ -98,6 +98,7 @@ export function buildPrompt(context: PromptContext): string {
     environment: context.environment,
     credentials: resolveCredentials(context.app.auth, true),
     previousAttempt: context.previousAttempt,
+    screenshotConfig: context.app.screenshots,
   };
 
   return template(templateData);
@@ -119,6 +120,7 @@ export function buildExecutionPrompt(context: PromptContext): string {
     environment: context.environment,
     credentials: resolveCredentials(context.app.auth, false),
     previousAttempt: context.previousAttempt,
+    screenshotConfig: context.app.screenshots,
   };
 
   return template(templateData);

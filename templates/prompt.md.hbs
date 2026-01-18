@@ -52,13 +52,33 @@ After completing the steps above, verify the following:
 {{/each}}
 {{/if}}
 
+## Screenshot Requirements
+
+{{#if screenshotConfig}}
+{{#if screenshotConfig.each_step}}
+- **REQUIRED:** Take a screenshot after EACH step for debugging purposes
+{{/if}}
+{{#if screenshotConfig.on_failure}}
+- **REQUIRED:** If any step fails, take a screenshot IMMEDIATELY at the failure point
+{{/if}}
+{{#if screenshotConfig.on_success}}
+- **REQUIRED:** Take a final screenshot after all steps complete successfully
+{{/if}}
+{{else}}
+- **REQUIRED:** Take a screenshot IMMEDIATELY if any step fails
+- Include the screenshot in your response as base64-encoded data
+{{/if}}
+
+Screenshots should capture the full viewport and clearly show the state of the page at that moment.
+
 ## Important Guidelines
 
 1. **Wait for page loads:** Always wait for navigation and content to load before interacting.
 2. **Be resilient:** If an exact selector doesn't work, try alternative approaches (text content, aria-labels, etc.).
-3. **Take screenshots:** Capture screenshots on failure or when explicitly requested.
+3. **Take screenshots:** Capture screenshots on failure, on success (if configured), or after each step (if debugging).
 4. **Handle dynamic content:** Wait for dynamic elements to appear before interacting.
 5. **Don't make assumptions:** If something is unclear, note it in the response rather than guessing.
+6. **Save screenshots:** When capturing screenshots, save them with descriptive names and include base64 data in your response.
 
 {{#if app.auth}}
 ## Authentication Details

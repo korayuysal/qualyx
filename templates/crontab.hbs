@@ -1,0 +1,24 @@
+# Qualyx Scheduled Test Crontab
+# Generated: {{generatedAt}}
+# Project: {{projectPath}}
+#
+# Install these entries with:
+#   crontab -e
+# Or replace your crontab entirely:
+#   crontab /path/to/this/file
+#
+# Format: minute hour day-of-month month day-of-week command
+# ┌───────────── minute (0 - 59)
+# │ ┌───────────── hour (0 - 23)
+# │ │ ┌───────────── day of month (1 - 31)
+# │ │ │ ┌───────────── month (1 - 12)
+# │ │ │ │ ┌───────────── day of week (0 - 6) (Sunday to Saturday)
+# │ │ │ │ │
+# * * * * * command
+
+{{#each rules}}
+# {{ruleName}} ({{appName}}) - {{formatCronDescription schedule}}
+{{schedule}} cd '{{escapeShell ../projectPath}}' && qualyx run --rule '{{escapeShell ruleId}}' --report >> /tmp/qualyx-{{ruleId}}.log 2>&1
+
+{{/each}}
+# End of Qualyx scheduled tasks

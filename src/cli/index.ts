@@ -3,8 +3,9 @@ import { runInit } from './commands/init.js';
 import { runValidate } from './commands/validate.js';
 import { runList } from './commands/list.js';
 import { runRun } from './commands/run.js';
+import { runScheduleList, runScheduleCron, runScheduleGithub } from './commands/schedule.js';
 
-const VERSION = '0.1.0';
+const VERSION = '0.2.0';
 
 export function createCli(): Command {
   const program = new Command();
@@ -74,6 +75,49 @@ export function createCli(): Command {
         report: options.report,
         reportDir: options.reportDir,
         save: options.save,
+      });
+    });
+
+  // Schedule command
+  const scheduleCmd = program
+    .command('schedule')
+    .description('Manage scheduled test rules');
+
+  scheduleCmd
+    .command('list')
+    .description('List all scheduled rules')
+    .option('-c, --config <path>', 'Path to configuration file')
+    .option('-f, --format <format>', 'Output format: table or json', 'table')
+    .action(async (options) => {
+      await runScheduleList({
+        config: options.config,
+        format: options.format,
+      });
+    });
+
+  scheduleCmd
+    .command('cron')
+    .description('Generate crontab entries for scheduled rules')
+    .option('-c, --config <path>', 'Path to configuration file')
+    .option('-o, --output <path>', 'Output file path')
+    .option('-p, --project-path <path>', 'Project path for cron commands')
+    .action(async (options) => {
+      await runScheduleCron({
+        config: options.config,
+        output: options.output,
+        projectPath: options.projectPath,
+      });
+    });
+
+  scheduleCmd
+    .command('github')
+    .description('Generate GitHub Actions workflow for scheduled rules')
+    .option('-c, --config <path>', 'Path to configuration file')
+    .option('-o, --output <path>', 'Output file path')
+    .action(async (options) => {
+      await runScheduleGithub({
+        config: options.config,
+        output: options.output,
       });
     });
 

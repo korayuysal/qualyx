@@ -22,6 +22,8 @@ export const RuleSchema = z.object({
   validations: z.array(z.string()).optional(),
   on_failure: z.array(z.string()).optional(),
   test_data: z.record(z.unknown()).optional(),
+  schedule: z.string().optional(), // Cron expression for scheduling
+  skip_setup: z.boolean().optional(), // Skip setup block for this rule
 });
 
 export const AuthSchema = z.object({
@@ -42,6 +44,7 @@ export const AppSchema = z.object({
   environments: z.record(z.string().url()).optional(),
   auth: AuthSchema.optional(),
   screenshots: ScreenshotsConfigSchema.optional(),
+  setup: z.array(z.string()).optional(), // Setup steps to run before rules
   rules: z.array(RuleSchema).min(1),
 });
 
@@ -56,9 +59,42 @@ export const OrganizationSchema = z.object({
   defaults: OrganizationDefaultsSchema.optional(),
 });
 
+// ============================================================
+// Notification & Integration Schemas
+// ============================================================
+
+export const SlackConfigSchema = z.object({
+  webhook_url: z.string().min(1),
+  on_failure: z.boolean().default(true),
+  on_success: z.boolean().default(false),
+  channel: z.string().optional(), // Override channel (if webhook supports it)
+  mention_on_failure: z.array(z.string()).optional(), // User IDs to mention on failure
+});
+
+export const JiraConfigSchema = z.object({
+  base_url: z.string().url(),
+  email: z.string().email(),
+  api_token: z.string().min(1),
+  project_key: z.string().min(1),
+  create_issues: z.boolean().default(true),
+  issue_type: z.string().default('Bug'),
+  labels: z.array(z.string()).optional(),
+  components: z.array(z.string()).optional(),
+});
+
+export const NotificationsSchema = z.object({
+  slack: SlackConfigSchema.optional(),
+});
+
+export const IntegrationsSchema = z.object({
+  jira: JiraConfigSchema.optional(),
+});
+
 export const QualyxConfigSchema = z.object({
   organization: OrganizationSchema,
   apps: z.array(AppSchema).min(1),
+  notifications: NotificationsSchema.optional(),
+  integrations: IntegrationsSchema.optional(),
 });
 
 // ============================================================
@@ -72,6 +108,10 @@ export type ScreenshotsConfig = z.infer<typeof ScreenshotsConfigSchema>;
 export type App = z.infer<typeof AppSchema>;
 export type OrganizationDefaults = z.infer<typeof OrganizationDefaultsSchema>;
 export type Organization = z.infer<typeof OrganizationSchema>;
+export type SlackConfig = z.infer<typeof SlackConfigSchema>;
+export type JiraConfig = z.infer<typeof JiraConfigSchema>;
+export type Notifications = z.infer<typeof NotificationsSchema>;
+export type Integrations = z.infer<typeof IntegrationsSchema>;
 export type QualyxConfig = z.infer<typeof QualyxConfigSchema>;
 
 // ============================================================
@@ -225,4 +265,38 @@ export interface ListOptions {
 
 export interface ValidateOptions {
   strict?: boolean;
+}
+
+// ============================================================
+// Schedule Types
+// ============================================================
+
+export interface ScheduledRule {
+  appName: string;
+  ruleId: string;
+  ruleName: string;
+  schedule: string; // Cron expression
+  severity: string;
+}
+
+export interface ScheduleExportOptions {
+  format: 'cron' | 'github';
+  projectPath?: string;
+  outputFile?: string;
+}
+
+// ============================================================
+// Integration Types
+// ============================================================
+
+export interface SlackNotificationPayload {
+  runResult: RunResult;
+  reportUrl?: string;
+  config: QualyxConfig;
+}
+
+export interface JiraIssuePayload {
+  testResult: TestResult;
+  runId: string;
+  config: QualyxConfig;
 }
