@@ -21,10 +21,37 @@
     "automation",
     "ai",
     "claude",
-    "playwright"
+    "playwright",
+    "e2e",
+    "end-to-end",
+    "natural-language",
+    "browser-testing"
   ],
-  "author": "",
+  "author": "Koray Uysal",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/korayuysal/qualyx.git"
+  },
+  "bugs": {
+    "url": "https://github.com/korayuysal/qualyx/issues"
+  },
+  "homepage": "https://github.com/korayuysal/qualyx#readme",
+  "files": [
+    "dist/cli",
+    "dist/core",
+    "dist/integrations",
+    "dist/reporters",
+    "dist/storage",
+    "dist/types",
+    "dist/index.js",
+    "dist/index.d.ts",
+    "dist/index.js.map",
+    "dist/index.d.ts.map",
+    "templates",
+    "README.md",
+    "LICENSE"
+  ],
   "dependencies": {
     "better-sqlite3": "^11.7.0",
     "chalk": "^5.4.1",

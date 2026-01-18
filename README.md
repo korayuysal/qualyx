@@ -1,6 +1,27 @@
 # Qualyx
 
-AI-powered QA automation platform using Claude Code CLI and Playwright.
+[![npm version](https://img.shields.io/npm/v/qualyx.svg)](https://www.npmjs.com/package/qualyx)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Node.js Version](https://img.shields.io/node/v/qualyx.svg)](https://nodejs.org)
+
+**AI-powered QA automation that understands your app like a human does.**
+
+Write tests in plain English. No selectors, no fragile locators, no maintenance headaches. Qualyx uses Claude AI to intelligently navigate and test your web applications.
+
+```yaml
+rules:
+  - id: checkout-flow
+    name: Complete purchase flow
+    steps:
+      - Add a product to the cart
+      - Go to checkout
+      - Fill in shipping details
+      - Complete the payment
+    validations:
+      - Order confirmation is displayed
+```
+
+---
 
 ## Overview
 

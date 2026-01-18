@@ -47,6 +47,7 @@ describe('Executor', () => {
       defaults: {
         timeout: 30000,
         retries: 1,
+        headless: true,
       },
     },
     apps: [mockApp],

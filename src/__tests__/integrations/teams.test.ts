@@ -114,7 +114,7 @@ describe('TeamsNotifier', () => {
       const body = message.attachments[0].content.body;
       const columnSet = body.find((b: any) => b.type === 'ColumnSet');
       expect(columnSet).toBeDefined();
-      expect(columnSet.columns).toHaveLength(4);
+      expect(columnSet!.columns).toHaveLength(4);
     });
 
     it('should include failed test details', () => {
@@ -128,7 +128,7 @@ describe('TeamsNotifier', () => {
       const message = notifier.buildMessage(mockRunResult, 'TestOrg', 'https://report.url');
       const actions = message.attachments[0].content.actions;
       expect(actions).toHaveLength(1);
-      expect(actions[0].url).toBe('https://report.url');
+      expect(actions![0].url).toBe('https://report.url');
     });
   });
 

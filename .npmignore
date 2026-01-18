@@ -1,0 +1,48 @@
+# Source files
+src/
+
+# Tests
+__tests__/
+dist/__tests__/
+*.test.ts
+*.spec.ts
+*.test.js
+*.spec.js
+*.test.d.ts
+*.spec.d.ts
+vitest.config.ts
+
+# Examples
+examples/
+
+# Config files
+*.config.ts
+tsconfig.json
+.eslintrc*
+.prettierrc*
+
+# GitHub
+.github/
+
+# Environment
+.env*
+.env.local
+.env.*.local
+
+# Git
+.gitignore
+.git/
+
+# Documentation (except README)
+*.md
+!README.md
+
+# Development
+.vscode/
+.idea/
+*.log
+npm-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
