@@ -25,6 +25,17 @@ apps:
     #     email: \${TEST_USER_EMAIL}
     #     password: \${TEST_USER_PASSWORD}
 
+    # Optional screenshot settings
+    # screenshots:
+    #   on_failure: true
+    #   on_success: false
+    #   each_step: false
+
+    # Optional setup steps (run once per app before rules)
+    # setup:
+    #   - Login to the application
+    #   - Navigate to dashboard
+
     rules:
       - id: homepage-loads
         name: Homepage loads successfully
@@ -39,6 +50,8 @@ apps:
       - id: navigation-works
         name: Main navigation is functional
         severity: high
+        # Optional: schedule this test to run automatically
+        # schedule: "0 7 * * *"  # Daily at 7 AM (cron syntax)
         steps:
           - Navigate to the homepage
           - Click on the main navigation menu
@@ -51,6 +64,8 @@ apps:
       # - id: user-login
       #   name: User can log in
       #   severity: critical
+      #   schedule: "*/30 * * * *"  # Every 30 minutes
+      #   skip_setup: false  # Set to true to skip app setup for this rule
       #   steps:
       #     - Navigate to the login page
       #     - action: Enter email address
@@ -62,6 +77,28 @@ apps:
       #   validations:
       #     - User is redirected to dashboard
       #     - User name is displayed in header
+
+# Optional: Slack notifications
+# notifications:
+#   slack:
+#     webhook_url: \${SLACK_WEBHOOK_URL}
+#     on_failure: true
+#     on_success: false
+#     mention_on_failure:
+#       - U123456789  # Slack user IDs to mention on failure
+
+# Optional: Jira integration for automatic issue creation
+# integrations:
+#   jira:
+#     base_url: https://company.atlassian.net
+#     email: \${JIRA_EMAIL}
+#     api_token: \${JIRA_API_TOKEN}
+#     project_key: QA
+#     create_issues: true
+#     issue_type: Bug
+#     labels:
+#       - qualyx
+#       - automated-test
 `;
 
 export interface InitOptions {
