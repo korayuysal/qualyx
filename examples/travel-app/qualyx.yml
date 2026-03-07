@@ -10,6 +10,7 @@ organization:
 apps:
   - name: flight-booking
     url: https://flights.travelco.com
+    locale: en
     environments:
       production: https://flights.travelco.com
       staging: https://staging.flights.travelco.com

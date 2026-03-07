@@ -1,0 +1,7 @@
+services:
+  qualyx:
+    build: .
+    env_file: .env
+    volumes:
+      - ./reports:/app/qualyx-reports
+      - ./data:/app/.qualyx

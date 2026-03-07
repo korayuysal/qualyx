@@ -40,3 +40,6 @@ qualyx-reports/
 
 # Test files
 test-config.yml
+
+# User-specific Qualyx configs (examples/ is tracked)
+/qualyx.yml

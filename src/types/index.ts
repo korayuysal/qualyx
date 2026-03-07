@@ -41,6 +41,7 @@ export const ScreenshotsConfigSchema = z.object({
 export const AppSchema = z.object({
   name: z.string().min(1),
   url: z.string().url(),
+  locale: z.string().optional(), // e.g. "cs" (Czech), "en", "de"
   environments: z.record(z.string().url()).optional(),
   auth: AuthSchema.optional(),
   screenshots: ScreenshotsConfigSchema.optional(),

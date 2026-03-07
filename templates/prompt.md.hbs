@@ -9,6 +9,12 @@
 - **Environment:** {{environment}}
 {{/if}}
 
+{{#if app.locale}}
+
+## Page Language
+This website is in **{{app.locale}}** language. All buttons, labels, menus, error messages, and navigation text will be in this language. When searching for elements, prioritize matching the localized text.
+{{/if}}
+
 {{#if credentials}}
 ## Credentials
 {{#each credentials}}
