@@ -1,0 +1,130 @@
+# Qualyx QA Tests — blue-style.cz
+# Runs automated QA tests against https://www.blue-style.cz
+#
+# Schedules:
+#   Daily 7 AM UTC  — Critical & high-severity tests (12 rules)
+#   Weekly Monday    — Medium-severity tests (6 rules)
+#   Weekly Wednesday — Multi-destination & Egypt price checks
+
+name: Blue Style QA Tests
+
+on:
+  schedule:
+    # Daily at 7 AM UTC — critical + high tests
+    - cron: '0 7 * * *'
+    # Weekly Monday midnight — medium tests
+    - cron: '0 0 * * 1'
+    # Weekly Wednesday 7 AM — Egypt price + multi-destination
+    - cron: '0 7 * * 3'
+
+  workflow_dispatch:
+    inputs:
+      rule:
+        description: 'Specific rule ID to run (leave empty for all scheduled)'
+        required: false
+        type: string
+      run_all:
+        description: 'Run all 18 rules regardless of schedule'
+        required: false
+        type: boolean
+        default: false
+
+env:
+  ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+
+jobs:
+  qa-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Qualyx
+        run: npm run build
+
+      - name: Install Claude Code CLI
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Run QA tests
+        run: |
+          CONFIG="qualyx.yml"
+
+          # Manual run with specific rule
+          if [ -n "${{ github.event.inputs.rule }}" ]; then
+            echo "Running specific rule: ${{ github.event.inputs.rule }}"
+            npx qualyx run --config "$CONFIG" --rule "${{ github.event.inputs.rule }}" --report --verbose
+            exit $?
+          fi
+
+          # Manual run: all rules
+          if [ "${{ github.event.inputs.run_all }}" = "true" ]; then
+            echo "Running ALL 18 rules"
+            npx qualyx run --config "$CONFIG" --report --verbose
+            exit $?
+          fi
+
+          # Scheduled run: pick rules by cron
+          CRON="${{ github.event.schedule }}"
+          echo "Triggered by cron: $CRON"
+
+          case "$CRON" in
+            "0 7 * * *")
+              echo "Daily run — critical & high severity"
+              for RULE in homepage-loads search-destination search-dates search-submit \
+                          list-content list-filters detail-content \
+                          price-list-vs-detail availability-10-greece \
+                          booking-start; do
+                echo "--- Running rule: $RULE ---"
+                npx qualyx run --config "$CONFIG" --rule "$RULE" --report --verbose || true
+              done
+              ;;
+            "0 0 * * 1")
+              echo "Weekly Monday — medium severity"
+              for RULE in list-sorting list-pagination detail-gallery-amenities \
+                          booking-form-fields no-results invalid-destination-url; do
+                echo "--- Running rule: $RULE ---"
+                npx qualyx run --config "$CONFIG" --rule "$RULE" --report --verbose || true
+              done
+              ;;
+            "0 7 * * 3")
+              echo "Weekly Wednesday — Egypt & multi-destination"
+              for RULE in price-match-egypt availability-multi-dest; do
+                echo "--- Running rule: $RULE ---"
+                npx qualyx run --config "$CONFIG" --rule "$RULE" --report --verbose || true
+              done
+              ;;
+            *)
+              echo "Unknown schedule, running all"
+              npx qualyx run --config "$CONFIG" --report --verbose
+              ;;
+          esac
+
+      - name: Upload test reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: qa-reports-${{ github.run_id }}
+          path: qualyx-reports/
+          retention-days: 30
+
+      - name: Upload screenshots
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: qa-screenshots-${{ github.run_id }}
+          path: qualyx-reports/screenshots/
+          retention-days: 14

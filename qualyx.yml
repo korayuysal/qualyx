@@ -1,0 +1,386 @@
+# Qualyx Configuration - blue-style.cz
+# Czech travel/hotel booking site - comprehensive QA suite
+#
+# 18 test rules across 7 groups:
+#   Core Search (4) | Hotel List (4) | Hotel Detail (2) | Price Match (2)
+#   Availability (2) | Booking Flow (2) | Edge Cases (2)
+
+organization:
+  name: BlueStyleQA
+  defaults:
+    timeout: 120000   # 2 min default — travel sites have heavy pages
+    retries: 2
+
+apps:
+  - name: blue-style-cz
+    url: https://www.blue-style.cz
+    locale: cs   # Czech — buttons like "Vyhledat", "Objednat", prices in "Kc"
+    auth:
+      type: none
+    screenshots:
+      on_failure: true
+      on_success: true
+    setup:
+      - Dismiss any cookie consent banner or popup that appears
+      - Close any promotional overlay or newsletter popup if present
+
+    rules:
+      # ================================================================
+      # GROUP 1: Core Search (4 rules)
+      # ================================================================
+
+      - id: homepage-loads
+        name: Homepage loads correctly
+        severity: critical
+        schedule: "0 7 * * *"   # Daily 7 AM
+        steps:
+          - Navigate to https://www.blue-style.cz
+          - Wait for the page to fully load
+          - Verify the main search form is visible
+        validations:
+          - Page title contains "Blue Style" or "blue-style"
+          - Main navigation menu is visible and functional
+          - Search/booking form is present on the page
+          - No JavaScript errors in the console
+
+      - id: search-destination
+        name: Search form accepts destination
+        severity: critical
+        schedule: "0 7 * * *"
+        steps:
+          - Navigate to https://www.blue-style.cz
+          - Locate the destination/search input field in the booking form
+          - Type "Recko" (Greece in Czech) into the destination field
+          - Wait for autocomplete suggestions or the destination to be accepted
+          - Verify the destination is selected or entered
+        validations:
+          - Destination field shows "Recko" or a matching suggestion appeared
+          - No error messages are displayed on the form
+
+      - id: search-dates
+        name: Search form date picker works
+        severity: critical
+        schedule: "0 7 * * *"
+        steps:
+          - Navigate to https://www.blue-style.cz
+          - Locate the date selection fields (departure date / "Termin")
+          - Open the date picker
+          - Select a date approximately 30 days from now
+          - Verify the selected date appears in the form
+        validations:
+          - Date field displays the selected date
+          - Date picker closes after selection or date is confirmed
+
+      - id: search-submit
+        name: Search form submits and returns results
+        severity: critical
+        schedule: "0 7 * * *"
+        steps:
+          - Navigate to https://www.blue-style.cz
+          - Select destination "Recko" (Greece) in the search form
+          - Select dates approximately 30 days from now
+          - Click the search button ("Vyhledat" in Czech)
+          - Wait for the results page to load (may take up to 30 seconds)
+        validations:
+          - Results page loaded successfully
+          - At least one hotel or travel offer is displayed
+          - Each result shows a price in CZK ("Kc")
+
+      # ================================================================
+      # GROUP 2: Hotel List (4 rules)
+      # ================================================================
+
+      - id: list-content
+        name: Hotel list displays correct content
+        severity: high
+        schedule: "0 7 * * *"
+        steps:
+          - Navigate to https://www.blue-style.cz
+          - Search for "Recko" (Greece) with dates about 30 days out
+          - Click "Vyhledat" (Search) and wait for results
+          - Examine the hotel/offer list on the results page
+        validations:
+          - At least 5 hotel offers are displayed
+          - Each offer shows a hotel name
+          - Each offer shows a price in CZK ("Kc")
+          - Each offer shows a star rating or category
+          - Each offer has a thumbnail image
+
+      - id: list-filters
+        name: Hotel list filters work
+        severity: high
+        schedule: "0 7 * * *"
+        steps:
+          - Navigate to https://www.blue-style.cz
+          - Search for "Recko" (Greece) with dates about 30 days out
+          - Click "Vyhledat" (Search) and wait for results
+          - Look for filter options (price range, star rating, meal type / "Stravovani")
+          - Apply a filter — e.g. select "4*" or higher star rating, or "All inclusive"
+          - Wait for the filtered results to load
+        validations:
+          - The results list updated after applying the filter
+          - The active filter is visually indicated
+          - Filtered results match the filter criteria (e.g. all 4+ stars)
+
+      - id: list-sorting
+        name: Hotel list sorting works
+        severity: medium
+        schedule: "0 0 * * 1"   # Weekly Monday
+        steps:
+          - Navigate to https://www.blue-style.cz
+          - Search for "Recko" (Greece) with dates about 30 days out
+          - Click "Vyhledat" (Search) and wait for results
+          - Find the sorting dropdown or sorting options (e.g. by price / "Cena", by name)
+          - Change sorting to "by price ascending" ("od nejlevnejsiho" or similar)
+          - Wait for results to reload
+        validations:
+          - Results reloaded after changing sort order
+          - Prices appear in ascending order (first result is cheapest)
+
+      - id: list-pagination
+        name: Hotel list pagination works
+        severity: medium
+        schedule: "0 0 * * 1"
+        steps:
+          - Navigate to https://www.blue-style.cz
+          - Search for "Recko" (Greece) with dates about 30 days out
+          - Click "Vyhledat" (Search) and wait for results
+          - Scroll to the bottom of the results list
+          - Look for pagination controls or a "load more" button ("Dalsi" / "Nacist dalsi")
+          - Click to load the next page or more results
+          - Wait for additional results to appear
+        validations:
+          - New results appeared (different hotels than the first page)
+          - Page did not break or show errors
+
+      # ================================================================
+      # GROUP 3: Hotel Detail (2 rules)
+      # ================================================================
+
+      - id: detail-content
+        name: Hotel detail page shows complete information
+        severity: high
+        schedule: "0 7 * * *"
+        steps:
+          - Navigate to https://www.blue-style.cz
+          - Search for "Recko" (Greece) with dates about 30 days out
+          - Click "Vyhledat" (Search) and wait for results
+          - Click on the first hotel offer in the results list
+          - Wait for the hotel detail page to fully load
+        validations:
+          - Hotel name is displayed prominently
+          - Star rating or category is shown
+          - Hotel description text is present
+          - Price per person in CZK ("Kc") is displayed
+          - A "book" or "order" button is visible ("Objednat" in Czech)
+          - Location/destination information is shown
+
+      - id: detail-gallery-amenities
+        name: Hotel detail gallery and amenities work
+        severity: medium
+        schedule: "0 0 * * 1"
+        steps:
+          - Navigate to https://www.blue-style.cz
+          - Search for "Recko" (Greece) with dates about 30 days out
+          - Click "Vyhledat" (Search) and wait for results
+          - Click on the first hotel offer
+          - Wait for the hotel detail page to load
+          - Look for a photo gallery section and try clicking through photos
+          - Scroll down to find amenities or services section ("Vybaveni" or "Sluzby")
+        validations:
+          - Photo gallery is present with at least one image
+          - Gallery navigation (arrows or thumbnails) works
+          - Hotel amenities or services section is visible
+
+      # ================================================================
+      # GROUP 4: Price Match (2 rules)
+      # ================================================================
+
+      - id: price-list-vs-detail
+        name: Price on list matches price on detail page
+        severity: critical
+        schedule: "0 7 * * *"
+        steps:
+          - Navigate to https://www.blue-style.cz
+          - Search for "Recko" (Greece) with dates about 30 days out
+          - Click "Vyhledat" (Search) and wait for results
+          - "IMPORTANT: Record the exact price shown for the FIRST hotel in the results list. Note the hotel name and price in CZK."
+          - Click on that first hotel to go to its detail page
+          - Wait for the detail page to fully load
+          - "IMPORTANT: Record the price shown on the detail page for the same date/configuration."
+          - "Compare the two prices: the list price and the detail price. They should match within 5% tolerance (minor rounding differences are acceptable)."
+        validations:
+          - List price was successfully recorded
+          - Detail price was successfully recorded
+          - Prices match within 5% tolerance
+          - Both prices are in CZK ("Kc")
+
+      - id: price-match-egypt
+        name: Price consistency for Egypt destination
+        severity: high
+        schedule: "0 7 * * 3"   # Weekly Wednesday
+        timeout: 180000
+        steps:
+          - Navigate to https://www.blue-style.cz
+          - Search for "Egypt" with dates about 30 days out
+          - Click "Vyhledat" (Search) and wait for results
+          - "IMPORTANT: Record the exact price shown for the FIRST hotel in the Egypt results list. Note the hotel name and price in CZK."
+          - Click on that first hotel to go to its detail page
+          - Wait for the detail page to fully load
+          - "IMPORTANT: Record the price shown on the detail page."
+          - "Compare the two prices. They should match within 5% tolerance."
+        validations:
+          - Egypt search returned results
+          - List price and detail price match within 5% tolerance
+
+      # ================================================================
+      # GROUP 5: Availability (2 rules)
+      # ================================================================
+
+      - id: availability-10-greece
+        name: Check availability for 10 Greek hotels
+        severity: high
+        schedule: "0 7 * * *"
+        timeout: 300000   # 5 min — checking 10 hotels
+        steps:
+          - Navigate to https://www.blue-style.cz
+          - Search for "Recko" (Greece) with dates about 30 days out
+          - Click "Vyhledat" (Search) and wait for results
+          - "For each of the first 10 hotels in the results list, record: hotel name, price in CZK, star rating (if shown), and whether a bookable offer is available (look for a price and an order/book button or link)."
+          - "Create a summary table of all 10 hotels with their availability status."
+        validations:
+          - At least 10 hotels were found in the results
+          - Each hotel's name, price, and availability was recorded
+          - At least 8 out of 10 hotels show available offers with prices
+
+      - id: availability-multi-dest
+        name: Check availability across 5 destinations
+        severity: high
+        schedule: "0 7 * * 3"
+        timeout: 360000   # 6 min — checking 5 destinations
+        steps:
+          - "For each of these 5 destinations, navigate to https://www.blue-style.cz, enter the destination, select dates about 30 days out, search, and record the first hotel result with its price:"
+          - "Destination 1: Recko (Greece)"
+          - "Destination 2: Egypt"
+          - "Destination 3: Turecko (Turkey)"
+          - "Destination 4: Tunisko (Tunisia)"
+          - "Destination 5: Spanelsko (Spain)"
+          - "Create a summary showing: destination name, first hotel name, price in CZK, and whether results loaded successfully."
+        validations:
+          - All 5 destination searches completed
+          - Each destination returned at least one hotel result
+          - Prices are displayed in CZK for all destinations
+
+      # ================================================================
+      # GROUP 6: Booking Flow (2 rules)
+      # ================================================================
+
+      - id: booking-start
+        name: Booking flow can be initiated
+        severity: critical
+        schedule: "0 7 * * *"
+        steps:
+          - Navigate to https://www.blue-style.cz
+          - Search for "Recko" (Greece) with dates about 30 days out
+          - Click "Vyhledat" (Search) and wait for results
+          - Click on the first hotel offer
+          - Wait for the detail page to load
+          - action: Click the booking/order button ("Objednat" or similar in Czech)
+            hint: Look for a prominent CTA button with text like "Objednat", "Rezervovat", or "Koupit"
+            caution: Do NOT proceed past the booking form. Do NOT enter payment information. Do NOT submit any payment.
+          - Wait for the booking/order form or next step to load
+        validations:
+          - Booking form or reservation page loaded
+          - The form is requesting traveler information (names, dates of birth, etc.)
+          - No errors occurred during navigation to the booking step
+
+      - id: booking-form-fields
+        name: Booking form has all required fields
+        severity: high
+        schedule: "0 0 * * 1"
+        steps:
+          - Navigate to https://www.blue-style.cz
+          - Search for "Recko" (Greece) with dates about 30 days out
+          - Click "Vyhledat" (Search) and wait for results
+          - Click on the first hotel offer
+          - Wait for the detail page to load
+          - action: Click the booking/order button ("Objednat" or similar)
+            caution: Do NOT submit any forms. Do NOT enter real personal data. Do NOT proceed to payment.
+          - Wait for the booking form to load
+          - action: Examine all form fields present on the booking page without filling them in
+            hint: Look for fields like name ("Jmeno"), surname ("Prijmeni"), date of birth ("Datum narozeni"), email, phone ("Telefon")
+            caution: Do NOT fill in any fields. Do NOT submit the form. Just read and verify field presence.
+        validations:
+          - Booking form contains name fields (first name / "Jmeno", last name / "Prijmeni")
+          - Booking form contains contact fields (email, phone / "Telefon")
+          - Booking form shows the total price
+          - Form has a submit/confirm button (but we do NOT click it)
+
+      # ================================================================
+      # GROUP 7: Edge Cases (2 rules)
+      # ================================================================
+
+      - id: no-results
+        name: Search with no results handles gracefully
+        severity: medium
+        schedule: "0 0 * * 1"
+        steps:
+          - Navigate to https://www.blue-style.cz
+          - Enter an unlikely or nonsensical destination like "XYZQWERTY123" in the search form
+          - Attempt to submit the search
+          - Observe the site's behavior
+        validations:
+          - Site did not crash or show a server error (no 500 error page)
+          - Either a "no results" message is shown, or the form prevents submission with a validation message
+          - The user can navigate back to the homepage easily
+
+      - id: invalid-destination-url
+        name: Invalid URL path handles gracefully
+        severity: medium
+        schedule: "0 0 * * 1"
+        steps:
+          - Navigate directly to https://www.blue-style.cz/zajezdy/neexistujici-destinace-12345
+          - Wait for the page to load
+          - Observe the page behavior
+        validations:
+          - Site does not show a raw server error or stack trace
+          - Either a 404 page is shown, or the user is redirected to a valid page
+          - Navigation menu is still accessible so the user can continue browsing
+
+# ================================================================
+# Notifications (uncomment to enable)
+# ================================================================
+# notifications:
+#   email:
+#     smtp_host: ${SMTP_HOST}
+#     smtp_port: 587
+#     smtp_user: ${SMTP_USER}
+#     smtp_pass: ${SMTP_PASS}
+#     from: qualyx@yourdomain.com
+#     to:
+#       - qa-team@yourdomain.com
+#     on_failure: true
+#     on_success: false
+#     subject_prefix: "[Qualyx Blue Style]"
+#
+#   slack:
+#     webhook_url: ${SLACK_WEBHOOK_URL}
+#     on_failure: true
+#     on_success: false
+#     mention_on_failure:
+#       - U1234567890   # Slack user ID to ping on failure
+
+# ================================================================
+# Integrations (uncomment to enable)
+# ================================================================
+# integrations:
+#   jira:
+#     base_url: https://yourteam.atlassian.net
+#     email: ${JIRA_EMAIL}
+#     api_token: ${JIRA_API_TOKEN}
+#     project_key: QA
+#     create_issues: true
+#     issue_type: Bug
+#     labels:
+#       - blue-style
+#       - automated-qa

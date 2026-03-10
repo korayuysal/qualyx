@@ -42,4 +42,4 @@ qualyx-reports/
 test-config.yml
 
 # User-specific Qualyx configs (examples/ is tracked)
-/qualyx.yml
+# /qualyx.yml  — tracked in bs-qualyx for blue-style.cz
