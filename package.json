@@ -1,70 +1,24 @@
 {
-  "name": "qualyx",
+  "name": "qualyx-monorepo",
   "version": "0.3.0",
-  "description": "AI-powered QA automation platform using Claude Code CLI and Playwright",
+  "private": true,
   "type": "module",
-  "main": "dist/index.js",
-  "bin": {
-    "qualyx": "dist/index.js"
-  },
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
   "scripts": {
-    "build": "tsc",
-    "dev": "tsx src/index.ts",
-    "start": "node dist/index.js",
+    "build": "npm run build --workspaces --if-present",
+    "build:core": "npm run build -w packages/core",
+    "build:cli": "npm run build -w packages/cli",
+    "build:worker": "npm run build -w packages/worker",
+    "dev": "tsx packages/cli/src/index.ts",
+    "start": "node packages/cli/dist/index.js",
     "test": "vitest",
-    "lint": "eslint src/",
-    "typecheck": "tsc --noEmit"
-  },
-  "keywords": [
-    "qa",
-    "testing",
-    "automation",
-    "ai",
-    "claude",
-    "playwright",
-    "e2e",
-    "end-to-end",
-    "natural-language",
-    "browser-testing"
-  ],
-  "author": "Koray Uysal",
-  "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/korayuysal/qualyx.git"
-  },
-  "bugs": {
-    "url": "https://github.com/korayuysal/qualyx/issues"
-  },
-  "homepage": "https://github.com/korayuysal/qualyx#readme",
-  "files": [
-    "dist/cli",
-    "dist/core",
-    "dist/integrations",
-    "dist/reporters",
-    "dist/storage",
-    "dist/types",
-    "dist/index.js",
-    "dist/index.d.ts",
-    "dist/index.js.map",
-    "dist/index.d.ts.map",
-    "templates",
-    "README.md",
-    "LICENSE"
-  ],
-  "dependencies": {
-    "better-sqlite3": "^11.7.0",
-    "chalk": "^5.4.1",
-    "commander": "^12.1.0",
-    "handlebars": "^4.7.8",
-    "nodemailer": "^6.9.16",
-    "yaml": "^2.7.0",
-    "zod": "^3.24.1"
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "lint": "eslint packages/*/src/ apps/*/src/"
   },
   "devDependencies": {
-    "@types/better-sqlite3": "^7.6.12",
-    "@types/node": "^22.10.5",
-    "@types/nodemailer": "^6.4.17",
     "tsx": "^4.19.2",
     "typescript": "^5.7.3",
     "vitest": "^2.1.8"

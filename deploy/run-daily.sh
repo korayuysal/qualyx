@@ -2,9 +2,9 @@
 set -euo pipefail
 
 # Qualyx daily run wrapper for cron
-# Usage: Add to crontab: 0 7 * * * /opt/qualyx-blue-style/run-daily.sh
+# Usage: Add to crontab: 0 7 * * * /opt/qualyx/run-daily.sh
 
-WORKDIR="/opt/qualyx-blue-style"
+WORKDIR="/opt/qualyx"
 LOGDIR="/var/log/qualyx"
 
 mkdir -p "$LOGDIR"

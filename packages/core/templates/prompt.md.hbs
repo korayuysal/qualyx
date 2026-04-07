@@ -1,0 +1,153 @@
+# Test Execution: {{rule.name}}
+
+## Context
+- **Application:** {{app.name}}
+- **URL:** {{url}}
+- **Test ID:** {{rule.id}}
+- **Severity:** {{uppercase rule.severity}}
+{{#if environment}}
+- **Environment:** {{environment}}
+{{/if}}
+
+{{#if app.locale}}
+
+## Page Language
+This website is in **{{app.locale}}** language. All buttons, labels, menus, error messages, and navigation text will be in this language. When searching for elements, prioritize matching the localized text.
+{{/if}}
+
+{{#if credentials}}
+## Credentials
+{{#each credentials}}
+- **{{@key}}:** {{this}}
+{{/each}}
+{{/if}}
+
+{{#if previousAttempt}}
+## Previous Attempt Failed
+**Error:** {{previousAttempt.error}}
+
+{{#if previousAttempt.screenshot}}
+A screenshot from the failure point has been captured. Please analyze it to understand what went wrong.
+{{/if}}
+
+{{#if previousAttempt.domSnippet}}
+### Relevant DOM at Failure Point
+```html
+{{previousAttempt.domSnippet}}
+```
+{{/if}}
+
+**Instructions:** Please try a different approach or be more specific with element selectors.
+{{/if}}
+
+## Test Instructions
+
+Execute the following test steps using browser automation (Playwright):
+
+{{#each rule.steps}}
+{{stepNumber @index}}. {{formatStep this}}
+{{/each}}
+
+{{#if rule.validations}}
+## Validations to Check
+
+After completing the steps above, verify the following:
+
+{{#each rule.validations}}
+- {{this}}
+{{/each}}
+{{/if}}
+
+## Screenshot Requirements
+
+{{#if screenshotConfig}}
+{{#if screenshotConfig.each_step}}
+- **REQUIRED:** Take a screenshot after EACH step for debugging purposes
+{{/if}}
+{{#if screenshotConfig.on_failure}}
+- **REQUIRED:** If any step fails, take a screenshot IMMEDIATELY at the failure point
+{{/if}}
+{{#if screenshotConfig.on_success}}
+- **REQUIRED:** Take a final screenshot after all steps complete successfully
+{{/if}}
+{{else}}
+- **REQUIRED:** Take a screenshot IMMEDIATELY if any step fails
+- Include the screenshot in your response as base64-encoded data
+{{/if}}
+
+Screenshots should capture the full viewport and clearly show the state of the page at that moment.
+
+## Important Guidelines
+
+1. **Wait for page loads:** Always wait for navigation and content to load before interacting.
+2. **Be resilient:** If an exact selector doesn't work, try alternative approaches (text content, aria-labels, etc.).
+3. **Take screenshots:** Capture screenshots on failure, on success (if configured), or after each step (if debugging).
+4. **Handle dynamic content:** Wait for dynamic elements to appear before interacting.
+5. **Don't make assumptions:** If something is unclear, note it in the response rather than guessing.
+6. **Save screenshots:** When capturing screenshots, save them with descriptive names and include base64 data in your response.
+
+{{#if app.auth}}
+## Authentication Details
+- **Auth Type:** {{app.auth.type}}
+{{#if app.auth.login_url}}
+- **Login URL:** {{app.auth.login_url}}
+{{/if}}
+{{/if}}
+
+{{#if collectMetrics}}
+## Performance Metrics Collection
+
+**REQUIRED:** Collect the following performance metrics during test execution:
+
+- **Page Load Time:** Time from navigation start to load event
+- **DOM Content Loaded:** Time until DOM is fully parsed
+- **First Contentful Paint (FCP):** Time until first content renders
+- **Largest Contentful Paint (LCP):** Time until largest content element renders
+- **Total Request Count:** Number of network requests made
+- **Total Transfer Size:** Total bytes transferred
+
+Use the browser's Performance API to collect these metrics:
+```javascript
+const timing = performance.timing;
+const entries = performance.getEntriesByType('paint');
+const resources = performance.getEntriesByType('resource');
+```
+{{/if}}
+
+## Expected Output Format
+
+After executing the test, respond with a JSON object in the following format:
+
+```json
+{
+  "status": "passed" | "failed",
+  "steps": [
+    {
+      "step": "Description of step",
+      "status": "passed" | "failed",
+      "timestamp": "ISO timestamp",
+      "duration": 1234,
+      "error": "Error message if failed"
+    }
+  ],
+  "validations": [
+    {
+      "validation": "What was validated",
+      "passed": true | false,
+      "details": "Additional details"
+    }
+  ],
+  "error": "Overall error message if test failed",
+  "screenshot": "base64 encoded screenshot if captured"{{#if collectMetrics}},
+  "performanceMetrics": {
+    "pageLoadTime": 1234,
+    "domContentLoaded": 567,
+    "firstContentfulPaint": 234,
+    "largestContentfulPaint": 890,
+    "totalRequestCount": 45,
+    "totalTransferSize": 1234567
+  }{{/if}}
+}
+```
+
+**Begin test execution now.**

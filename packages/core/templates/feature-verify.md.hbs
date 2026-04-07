@@ -1,0 +1,112 @@
+# Feature Verification
+
+**Target URL:** {{url}}
+
+{{#if jira}}
+## Requirements (from Jira {{jira.key}})
+
+**Summary:** {{jira.summary}}
+**Status:** {{jira.status}}
+
+{{#if jira.description}}
+### Description
+{{jira.description}}
+{{/if}}
+
+{{#if jira.acceptanceCriteria.length}}
+### Acceptance Criteria to Verify
+{{#each jira.acceptanceCriteria}}
+- [ ] {{this}}
+{{/each}}
+{{/if}}
+
+> [View Issue in Jira]({{jira.url}})
+{{/if}}
+
+{{#if figma}}
+## Design Specifications (from Figma)
+
+**Component:** {{figma.nodeName}} ({{figma.nodeType}})
+{{#if figma.dimensions}}
+**Expected Dimensions:** {{figma.dimensions.width}}px × {{figma.dimensions.height}}px
+{{/if}}
+
+{{#if figma.textContent.length}}
+### Expected Text Content
+{{#each figma.textContent}}
+- "{{this}}"
+{{/each}}
+{{/if}}
+
+{{#if figma.colors.length}}
+### Expected Colors
+{{#each figma.colors}}
+- `{{this}}`
+{{/each}}
+{{/if}}
+
+> [View Design in Figma]({{figma.url}})
+{{/if}}
+
+## Verification Instructions
+
+Navigate to the target URL and verify the following:
+
+{{#if jira}}
+### Requirements Verification
+{{#if jira.acceptanceCriteria.length}}
+1. For each acceptance criterion listed above, verify it is correctly implemented in the running application.
+2. Check that the feature behavior matches the requirements described.
+{{else}}
+1. Verify the feature matches the description and summary from the Jira issue.
+2. Check that the implementation aligns with the stated requirements.
+{{/if}}
+{{/if}}
+
+{{#if figma}}
+### Design Verification
+1. Compare the visual appearance with the Figma design specifications.
+{{#if figma.textContent.length}}
+2. Verify all expected text content is present and displayed correctly.
+{{/if}}
+{{#if figma.colors.length}}
+3. Check that the colors used match the design specifications.
+{{/if}}
+{{#if figma.dimensions}}
+4. Verify the component dimensions are approximately correct ({{figma.dimensions.width}}px × {{figma.dimensions.height}}px).
+{{/if}}
+{{/if}}
+
+## Important Guidelines
+
+1. **Navigate first:** Go to the target URL and wait for the page to fully load.
+2. **Take screenshots:** Capture screenshots to document your verification findings.
+3. **Be thorough:** Check each criterion individually and document your findings.
+4. **Note discrepancies:** If something doesn't match, describe the difference clearly.
+5. **Check interactivity:** If the feature has interactive elements, test them.
+
+## Expected Response Format
+
+After completing the verification, respond with a JSON object in the following format:
+
+```json
+{
+  "status": "passed" | "failed",
+  "verifications": [
+    {
+      "criterion": "Description of what was verified",
+      "status": "passed" | "failed",
+      "notes": "Additional details about the verification result"
+    }
+  ],
+  "summary": "Overall summary of the verification results",
+  "screenshot": "base64 encoded screenshot of the verified feature"
+}
+```
+
+**Verification Status Guidelines:**
+- Mark as "passed" if ALL criteria are met successfully
+- Mark as "failed" if ANY criterion fails or cannot be verified
+- Include specific notes explaining what passed or failed for each criterion
+
+**Begin verification now.**

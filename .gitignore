@@ -41,5 +41,9 @@ qualyx-reports/
 # Test files
 test-config.yml
 
-# User-specific Qualyx configs (examples/ is tracked)
+# User-specific Qualyx configs (examples/travel-app is tracked, blue-style is private)
 /qualyx.yml
+examples/blue-style/
+
+# Old src/ directory (migrated to packages/)
+/src/

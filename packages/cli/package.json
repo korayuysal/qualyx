@@ -1,0 +1,52 @@
+{
+  "name": "qualyx",
+  "version": "0.3.0",
+  "description": "AI-powered QA automation platform using Claude Code CLI and Playwright",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "qualyx": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx src/index.ts",
+    "start": "node dist/index.js",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": [
+    "qa",
+    "testing",
+    "automation",
+    "ai",
+    "claude",
+    "playwright",
+    "e2e",
+    "end-to-end",
+    "natural-language",
+    "browser-testing"
+  ],
+  "author": "Koray Uysal",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/korayuysal/qualyx.git"
+  },
+  "dependencies": {
+    "@qualyx/core": "*",
+    "chalk": "^5.4.1",
+    "commander": "^12.1.0",
+    "handlebars": "^4.7.8"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.5",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3"
+  },
+  "files": [
+    "dist",
+    "templates"
+  ],
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

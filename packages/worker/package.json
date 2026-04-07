@@ -1,0 +1,20 @@
+{
+  "name": "@qualyx/worker",
+  "version": "0.3.0",
+  "description": "Job worker for Qualyx QA automation platform",
+  "type": "module",
+  "main": "dist/index.js",
+  "private": true,
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@qualyx/core": "*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.5",
+    "typescript": "^5.7.3"
+  }
+}

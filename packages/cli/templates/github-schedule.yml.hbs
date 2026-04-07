@@ -1,0 +1,153 @@
+# Qualyx Scheduled Tests - GitHub Actions Workflow
+# Generated: {{generatedAt}}
+# Organization: {{organizationName}}
+#
+# This workflow runs Qualyx tests on a schedule.
+# Commit and push this file to enable scheduled runs.
+
+name: Qualyx Scheduled Tests
+
+on:
+  # Scheduled triggers for each unique schedule
+  schedule:
+{{#each scheduleGroups}}
+    # {{#each rules}}{{ruleName}}{{#unless @last}}, {{/unless}}{{/each}}
+    - cron: '{{schedule}}'
+{{/each}}
+
+  # Allow manual triggering with optional rule filter
+  workflow_dispatch:
+    inputs:
+      rule:
+        description: 'Specific rule ID to run (leave empty for all)'
+        required: false
+        type: string
+      app:
+        description: 'Specific app name to run (leave empty for all)'
+        required: false
+        type: string
+
+env:
+  # Add your test credentials as repository secrets
+  # TEST_USER_EMAIL: $\{{ secrets.TEST_USER_EMAIL }}
+  # TEST_USER_PASSWORD: $\{{ secrets.TEST_USER_PASSWORD }}
+  ANTHROPIC_API_KEY: $\{{ secrets.ANTHROPIC_API_KEY }}
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Claude Code CLI
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Determine which rule to run
+        id: determine-rule
+        run: |
+          # Check if this is a manual run with a specific rule
+          if [ -n "$\{{ github.event.inputs.rule }}" ]; then
+            echo "rule=$\{{ github.event.inputs.rule }}" >> $GITHUB_OUTPUT
+            echo "Running specific rule: $\{{ github.event.inputs.rule }}"
+            exit 0
+          fi
+
+          # Check if this is a manual run with a specific app
+          if [ -n "$\{{ github.event.inputs.app }}" ]; then
+            echo "app=$\{{ github.event.inputs.app }}" >> $GITHUB_OUTPUT
+            echo "Running all rules for app: $\{{ github.event.inputs.app }}"
+            exit 0
+          fi
+
+          # For scheduled runs, determine which rule based on cron
+          CURRENT_CRON="${\{ github.event.schedule }}"
+          echo "Current cron schedule: $CURRENT_CRON"
+
+          # Map cron schedules to rules
+{{#each scheduleGroups}}
+          if [ "$CURRENT_CRON" = "{{schedule}}" ]; then
+{{#if (gt rules.length 1)}}
+            # Multiple rules share this schedule - run all of them
+            echo "rules={{#each rules}}{{ruleId}}{{#unless @last}},{{/unless}}{{/each}}" >> $GITHUB_OUTPUT
+{{else}}
+            echo "rule={{rules.[0].ruleId}}" >> $GITHUB_OUTPUT
+{{/if}}
+          fi
+{{/each}}
+
+      - name: Run Qualyx tests
+        run: |
+          RULE="${\{ steps.determine-rule.outputs.rule }}"
+          RULES="${\{ steps.determine-rule.outputs.rules }}"
+          APP="${\{ steps.determine-rule.outputs.app }}"
+
+          if [ -n "$RULE" ]; then
+            qualyx run --rule "$RULE" --report --report-dir ./qualyx-reports
+          elif [ -n "$RULES" ]; then
+            # Run multiple rules
+            IFS=',' read -ra RULE_ARRAY <<< "$RULES"
+            for rule in "${RULE_ARRAY[@]}"; do
+              echo "Running rule: $rule"
+              qualyx run --rule "$rule" --report --report-dir ./qualyx-reports || true
+            done
+          elif [ -n "$APP" ]; then
+            qualyx run --app "$APP" --report --report-dir ./qualyx-reports
+          else
+            # Fallback: run all tests
+            qualyx run --report --report-dir ./qualyx-reports
+          fi
+
+      - name: Upload test reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: qualyx-reports-$\{{ github.run_id }}
+          path: qualyx-reports/
+          retention-days: 30
+
+      - name: Upload screenshots (on failure)
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: qualyx-screenshots-$\{{ github.run_id }}
+          path: qualyx-reports/screenshots/
+          retention-days: 14
+
+# Individual jobs for each scheduled rule (alternative approach)
+# Uncomment this section if you prefer separate jobs per rule
+
+{{#each rules}}
+#   {{ruleId}}:
+#     runs-on: ubuntu-latest
+#     if: github.event.schedule == '{{schedule}}' || github.event.inputs.rule == '{{ruleId}}'
+#     steps:
+#       - uses: actions/checkout@v4
+#       - uses: actions/setup-node@v4
+#         with:
+#           node-version: '20'
+#       - run: npm ci
+#       - run: npm install -g @anthropic-ai/claude-code
+#       - run: npx playwright install --with-deps chromium
+#       - run: qualyx run --rule {{ruleId}} --report
+#       - uses: actions/upload-artifact@v4
+#         if: always()
+#         with:
+#           name: report-{{ruleId}}-$\{{ github.run_id }}
+#           path: qualyx-reports/
+
+{{/each}}

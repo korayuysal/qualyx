@@ -20,16 +20,15 @@ npm install -g qualyx @anthropic-ai/claude-code
 npx playwright install --with-deps chromium
 
 # Create working directory
-sudo mkdir -p /opt/qualyx-blue-style
-sudo chown $USER:$USER /opt/qualyx-blue-style
-cd /opt/qualyx-blue-style
+sudo mkdir -p /opt/qualyx
+sudo chown $USER:$USER /opt/qualyx
+cd /opt/qualyx
 
 # Copy your config
 cp /path/to/qualyx.yml .
 
-# Create .env
+# Create .env with your settings
 cat > .env << 'EOF'
-ANTHROPIC_API_KEY=sk-ant-...
 # Optional — uncomment when ready:
 # SMTP_HOST=smtp.gmail.com
 # SMTP_USER=you@gmail.com
@@ -52,13 +51,13 @@ qualyx schedule cron
 Or use the wrapper script:
 
 ```bash
-cp deploy/run-daily.sh /opt/qualyx-blue-style/
-chmod +x /opt/qualyx-blue-style/run-daily.sh
+cp deploy/run-daily.sh /opt/qualyx/
+chmod +x /opt/qualyx/run-daily.sh
 
 # Add to crontab
 crontab -e
 # Daily at 7 AM:
-# 0 7 * * * /opt/qualyx-blue-style/run-daily.sh
+# 0 7 * * * /opt/qualyx/run-daily.sh
 ```
 
 ### Log Rotation
@@ -85,20 +84,18 @@ sudo chown $USER:$USER /var/log/qualyx
 Generate the workflow file:
 
 ```bash
-qualyx schedule github --output .github/workflows/qualyx-blue-style.yml
+qualyx schedule github --output .github/workflows/qualyx-qa.yml
 ```
 
 Or create it manually:
 
 ```yaml
-# .github/workflows/qualyx-blue-style.yml
-name: Qualyx - Blue Style QA
+# .github/workflows/qualyx-qa.yml
+name: Qualyx QA
 
 on:
   schedule:
     - cron: '0 7 * * *'    # Daily at 7 AM UTC
-    - cron: '0 0 * * 1'    # Weekly Monday midnight UTC
-    - cron: '0 7 * * 3'    # Weekly Wednesday 7 AM UTC
   workflow_dispatch:         # Manual trigger
 
 jobs:
@@ -118,8 +115,6 @@ jobs:
           npx playwright install --with-deps chromium
 
       - name: Run QA suite
-        env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
           qualyx run --parallel --max-parallel 3 --report --collect-metrics
 
@@ -134,15 +129,9 @@ jobs:
           retention-days: 30
 ```
 
-### Required Secrets
-
-In your repo Settings > Secrets and variables > Actions:
-
-- `ANTHROPIC_API_KEY` — your Anthropic API key
-
 ### Trade-offs
 
-- Uses CI minutes (~78 runs/week with the schedules above)
+- Uses CI minutes
 - No persistent history DB across runs (each run starts fresh)
 - Reports available as downloadable artifacts
 
@@ -185,7 +174,6 @@ The Docker image works on any Docker host:
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `ANTHROPIC_API_KEY` | Yes | Anthropic API key for Claude |
 | `SMTP_HOST` | No | SMTP server for email reports |
 | `SMTP_USER` | No | SMTP username |
 | `SMTP_PASS` | No | SMTP password |
