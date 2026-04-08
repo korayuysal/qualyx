@@ -33,6 +33,10 @@ export {
   analyzeTestTrend,
 } from './storage/results.js';
 
+// Database (PostgreSQL)
+export { getDb, closeDb, schema } from './db/index.js';
+export type { Database } from './db/index.js';
+
 // Reporters
 export { ConsoleReporter, printDryRunPreview, printValidationResult, printList } from './reporters/console.js';
 export { generateHtmlReport } from './reporters/html.js';
