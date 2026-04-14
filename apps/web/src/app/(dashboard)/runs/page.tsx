@@ -48,31 +48,43 @@ export default async function RunsPage() {
               {runs.map((run) => (
                 <tr key={run.id} className="hover:bg-gray-900/30">
                   <td className="px-4 py-3">
-                    <span className={`rounded-full px-2 py-0.5 text-xs ${
-                      run.status === 'running'
-                        ? 'bg-yellow-900/50 text-yellow-300'
-                        : run.failed > 0
-                        ? 'bg-red-900/50 text-red-300'
-                        : 'bg-green-900/50 text-green-300'
-                    }`}>
-                      {run.status === 'running' ? 'Running' : run.failed > 0 ? 'Failed' : 'Passed'}
-                    </span>
+                    <a href={`/runs/${run.id}`} className="flex items-center gap-2">
+                      <span className={`rounded-full px-2 py-0.5 text-xs ${
+                        run.status === 'running'
+                          ? 'bg-yellow-900/50 text-yellow-300'
+                          : run.status === 'cancelled'
+                          ? 'bg-gray-700/50 text-gray-300'
+                          : run.failed > 0
+                          ? 'bg-red-900/50 text-red-300'
+                          : 'bg-green-900/50 text-green-300'
+                      }`}>
+                        {run.status === 'running' ? 'Running' : run.status === 'cancelled' ? 'Cancelled' : run.failed > 0 ? 'Failed' : 'Passed'}
+                      </span>
+                    </a>
                   </td>
-                  <td className="px-4 py-3">{run.totalTests}</td>
                   <td className="px-4 py-3">
-                    <span className="text-green-400">{run.passed}</span>
-                    {' / '}
-                    <span className="text-red-400">{run.failed}</span>
-                    {run.skipped > 0 && (
-                      <> / <span className="text-gray-500">{run.skipped}</span></>
-                    )}
+                    <a href={`/runs/${run.id}`}>{run.totalTests}</a>
+                  </td>
+                  <td className="px-4 py-3">
+                    <a href={`/runs/${run.id}`}>
+                      <span className="text-green-400">{run.passed}</span>
+                      {' / '}
+                      <span className="text-red-400">{run.failed}</span>
+                      {run.skipped > 0 && (
+                        <> / <span className="text-gray-500">{run.skipped}</span></>
+                      )}
+                    </a>
                   </td>
                   <td className="px-4 py-3 text-gray-400">
-                    {run.duration ? `${(run.duration / 1000).toFixed(1)}s` : '-'}
+                    <a href={`/runs/${run.id}`}>
+                      {run.duration ? `${(run.duration / 1000).toFixed(1)}s` : '-'}
+                    </a>
                   </td>
-                  <td className="px-4 py-3 text-gray-400 capitalize">{run.triggeredBy}</td>
+                  <td className="px-4 py-3 text-gray-400 capitalize">
+                    <a href={`/runs/${run.id}`}>{run.triggeredBy}</a>
+                  </td>
                   <td className="px-4 py-3 text-gray-400">
-                    {run.startedAt.toLocaleString()}
+                    <a href={`/runs/${run.id}`}>{run.startedAt.toLocaleString()}</a>
                   </td>
                 </tr>
               ))}
