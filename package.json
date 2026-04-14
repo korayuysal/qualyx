@@ -16,6 +16,8 @@
     "start": "node packages/cli/dist/index.js",
     "test": "vitest",
     "dev:web": "npm run dev -w web",
+    "dev:worker": "tsx packages/worker/src/index.ts",
+    "start:worker": "node packages/worker/dist/index.js",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "lint": "eslint packages/*/src/ apps/*/src/"
   },
