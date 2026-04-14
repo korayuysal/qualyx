@@ -1,9 +1,13 @@
 import { drizzle } from 'drizzle-orm/node-postgres';
 import pg from 'pg';
-import { schema } from '@qualyx/core';
+import { schema, pgSslConfig } from '@qualyx/core';
 
-const pool = new pg.Pool({
+const globalForDb = globalThis as unknown as { dbPool: pg.Pool };
+
+const pool = globalForDb.dbPool ??= new pg.Pool({
   connectionString: process.env.DATABASE_URL!,
+  ssl: pgSslConfig(),
+  max: 5,
 });
 
 export const db = drizzle(pool, { schema });
