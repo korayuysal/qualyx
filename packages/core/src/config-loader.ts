@@ -183,6 +183,20 @@ export interface LoadConfigResult {
 }
 
 /**
+ * Parse and validate a YAML string as Qualyx configuration.
+ * Used by the worker to process scenarios stored in the database.
+ */
+export function parseConfigFromYaml(yamlString: string): LoadConfigResult {
+  const rawConfig = parseYaml(yamlString);
+  const configWithEnvVars = substituteEnvVarsInObject(rawConfig);
+  const config = validateConfig(configWithEnvVars, '<scenario-yaml>');
+  validateUniqueAppNames(config);
+  validateUniqueRuleIds(config);
+  const warnings = checkUnresolvedEnvVars(config);
+  return { config, filePath: '<scenario-yaml>', warnings };
+}
+
+/**
  * Load, parse, and validate the Qualyx configuration file.
  */
 export function loadConfig(configPath?: string): LoadConfigResult {

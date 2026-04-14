@@ -21,13 +21,13 @@ import {
 } from './retry-handler.js';
 
 export interface ExecutorCallbacks {
-  onTestStart?: (app: App, rule: Rule) => void;
-  onTestComplete?: (result: TestResult) => void;
-  onTestRetry?: (app: App, rule: Rule, attempt: number, maxRetries: number) => void;
-  onRunStart?: (totalTests: number) => void;
-  onRunComplete?: (result: RunResult) => void;
-  onSetupStart?: (app: App) => void;
-  onSetupComplete?: (app: App, success: boolean, error?: string) => void;
+  onTestStart?: (app: App, rule: Rule) => void | Promise<void>;
+  onTestComplete?: (result: TestResult) => void | Promise<void>;
+  onTestRetry?: (app: App, rule: Rule, attempt: number, maxRetries: number) => void | Promise<void>;
+  onRunStart?: (totalTests: number) => void | Promise<void>;
+  onRunComplete?: (result: RunResult) => void | Promise<void>;
+  onSetupStart?: (app: App) => void | Promise<void>;
+  onSetupComplete?: (app: App, success: boolean, error?: string) => void | Promise<void>;
 }
 
 export interface ExecutorOptions extends RunOptions {
@@ -73,7 +73,7 @@ export class Executor {
     const testsToRun = this.getTestsToRun();
 
     // Notify run start
-    this.callbacks.onRunStart?.(testsToRun.length);
+    await this.callbacks.onRunStart?.(testsToRun.length);
 
     // Execute tests (parallel or sequential)
     const results = this.options.parallel
@@ -97,7 +97,7 @@ export class Executor {
     };
 
     // Notify run complete
-    this.callbacks.onRunComplete?.(runResult);
+    await this.callbacks.onRunComplete?.(runResult);
 
     return runResult;
   }
@@ -118,7 +118,7 @@ export class Executor {
       if (this.setupErrors.has(app.name) && !rule.skip_setup) {
         const skipResult = this.createSkipResult(app, rule, `Setup failed: ${this.setupErrors.get(app.name)}`);
         results.push(skipResult);
-        this.callbacks.onTestComplete?.(skipResult);
+        await this.callbacks.onTestComplete?.(skipResult);
         continue;
       }
 
@@ -166,7 +166,7 @@ export class Executor {
         if (this.setupErrors.has(app.name) && !rule.skip_setup) {
           const skipResult = this.createSkipResult(app, rule, `Setup failed: ${this.setupErrors.get(app.name)}`);
           results.push(skipResult);
-          this.callbacks.onTestComplete?.(skipResult);
+          await this.callbacks.onTestComplete?.(skipResult);
         } else {
           const result = await this.executeTest(app, rule);
           results.push(result);
@@ -246,7 +246,7 @@ export class Executor {
    */
   private async executeTest(app: App, rule: Rule): Promise<TestResult> {
     // Notify test start
-    this.callbacks.onTestStart?.(app, rule);
+    await this.callbacks.onTestStart?.(app, rule);
 
     const startedAt = new Date().toISOString();
     const maxRetries = this.options.retries ?? this.config.organization.defaults?.retries ?? 2;
@@ -272,7 +272,7 @@ export class Executor {
       retryCount++;
 
       // Notify retry
-      this.callbacks.onTestRetry?.(app, rule, retryCount, maxRetries);
+      await this.callbacks.onTestRetry?.(app, rule, retryCount, maxRetries);
 
       // Wait before retry (exponential backoff)
       await sleep(calculateRetryDelay(retryCount - 1));
@@ -309,7 +309,7 @@ export class Executor {
     };
 
     // Notify test complete
-    this.callbacks.onTestComplete?.(testResult);
+    await this.callbacks.onTestComplete?.(testResult);
 
     return testResult;
   }
@@ -348,7 +348,7 @@ export class Executor {
     }
 
     // Notify setup start
-    this.callbacks.onSetupStart?.(app);
+    await this.callbacks.onSetupStart?.(app);
 
     // Create a virtual rule for setup
     const setupRule: Rule = {
@@ -380,15 +380,15 @@ export class Executor {
 
       if (result.status === 'passed') {
         this.setupCompleted.set(app.name, true);
-        this.callbacks.onSetupComplete?.(app, true);
+        await this.callbacks.onSetupComplete?.(app, true);
       } else {
         this.setupErrors.set(app.name, result.error || 'Setup failed');
-        this.callbacks.onSetupComplete?.(app, false, result.error);
+        await this.callbacks.onSetupComplete?.(app, false, result.error);
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown setup error';
       this.setupErrors.set(app.name, errorMessage);
-      this.callbacks.onSetupComplete?.(app, false, errorMessage);
+      await this.callbacks.onSetupComplete?.(app, false, errorMessage);
     }
   }
 

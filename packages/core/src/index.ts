@@ -2,7 +2,8 @@
 export * from './executor.js';
 export * from './claude-runner.js';
 export * from './prompt-builder.js';
-export * from './config-loader.js';
+export { loadConfig, parseConfigFromYaml, findConfigFile, getApp, getRule, getEnvironmentUrl, getConfigDir, getScheduledRules, getAppSetup, ConfigLoadError } from './config-loader.js';
+export type { LoadConfigResult } from './config-loader.js';
 export * from './retry-handler.js';
 export * from './feature-verify-prompt.js';
 
@@ -34,7 +35,7 @@ export {
 } from './storage/results.js';
 
 // Database (PostgreSQL)
-export { getDb, closeDb, schema } from './db/index.js';
+export { getDb, closeDb, schema, pgSslConfig, pgDirectConnectionString } from './db/index.js';
 export type { Database } from './db/index.js';
 
 // Reporters
