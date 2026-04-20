@@ -25,10 +25,10 @@ This website is in **{{app.locale}}** language. All buttons, labels, menus, erro
 {{#if mailosaur}}
 ## Mailosaur Inbox (for email/SMS verification)
 
-This scenario can verify emails and SMS messages sent by the app. A Mailosaur test server is configured:
+This scenario can verify emails and SMS messages sent by the app via a Mailosaur test server:
 
 - **Server ID:** `{{mailosaur.serverId}}`
-- **API key:** `{{mailosaur.apiKeyHint}}` (full key available in the `MAILOSAUR_API_KEY` env var at runtime)
+- **API key:** `{{mailosaur.apiKey}}`
 {{#if mailosaur.defaultInbox}}
 - **Default inbox:** `{{mailosaur.defaultInbox}}`
 {{/if}}
@@ -36,7 +36,7 @@ This scenario can verify emails and SMS messages sent by the app. A Mailosaur te
 To check for a received message, call the Mailosaur REST API:
 
 ```
-GET https://mailosaur.com/api/messages/search?server={{mailosaur.serverId}}
+POST https://mailosaur.com/api/messages/search?server={{mailosaur.serverId}}
 Authorization: Basic <base64(api_key + ":")>
 Body: { "sentTo": "<inbox>", "subject": "<optional>", "body": "<optional>" }
 ```

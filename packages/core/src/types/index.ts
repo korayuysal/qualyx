@@ -246,7 +246,8 @@ export interface ClaudeResponse {
 export interface MailosaurPromptHint {
   serverId: string;
   defaultInbox?: string;
-  apiKeyHint: string;
+  /** Full API key in exec prompts; masked "xxx****xxx" in dry-run previews. */
+  apiKey: string;
 }
 
 export interface PromptContext {
@@ -260,7 +261,7 @@ export interface PromptContext {
     domSnippet?: string;
   };
   collectMetrics?: boolean;
-  mailosaur?: MailosaurPromptHint;
+  mailosaur?: MailosaurIntegrationConfig;
 }
 
 // ============================================================

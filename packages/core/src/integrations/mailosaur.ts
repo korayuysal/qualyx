@@ -85,11 +85,12 @@ export async function sendMailosaurNotification(
 
 export function buildMailosaurPromptHint(
   config: MailosaurIntegrationConfig,
+  { maskApiKey: shouldMask = false }: { maskApiKey?: boolean } = {},
 ): MailosaurPromptHint {
   return {
     serverId: config.server_id,
     defaultInbox: config.default_inbox,
-    apiKeyHint: maskApiKey(config.api_key),
+    apiKey: shouldMask ? maskApiKey(config.api_key) : config.api_key,
   };
 }
 
