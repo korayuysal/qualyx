@@ -1,5 +1,6 @@
-import { createBoss, JOB_RUN_SCENARIO } from './queue.js';
+import { createBoss, JOB_RUN_SCENARIO, JOB_SCHEDULE_TICK } from './queue.js';
 import { handleRunScenario } from './handler.js';
+import { ensureScheduleTick, handleScheduleTick } from './schedules.js';
 
 async function main() {
   const boss = createBoss();
@@ -12,6 +13,14 @@ async function main() {
   console.log('Qualyx worker started, listening for jobs...');
 
   await boss.work(JOB_RUN_SCENARIO, { batchSize: 1 }, handleRunScenario);
+
+  await boss.work<object>(
+    JOB_SCHEDULE_TICK,
+    { batchSize: 1 },
+    (jobs) => handleScheduleTick(boss, jobs),
+  );
+  await ensureScheduleTick(boss);
+  console.log(`Schedule tick registered (${JOB_SCHEDULE_TICK}).`);
 
   // Graceful shutdown
   const shutdown = async () => {

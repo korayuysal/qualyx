@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { pgSslConfig, pgDirectConnectionString } from '@qualyx/core';
 
 export const JOB_RUN_SCENARIO = 'run-scenario';
+export const JOB_SCHEDULE_TICK = 'qualyx-schedule-tick';
 
 export const RunScenarioJobSchema = z.object({
   runId: z.string().uuid(),

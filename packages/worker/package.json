@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@qualyx/core": "*",
+    "cron-parser": "^4.9.0",
     "drizzle-orm": "^0.45.2",
     "pg-boss": "^10.0.0"
   },
