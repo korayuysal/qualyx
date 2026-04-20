@@ -16,6 +16,12 @@ export { SlackNotifier, sendSlackNotification } from './integrations/slack.js';
 export { EmailNotifier, sendEmailNotification } from './integrations/email.js';
 export { TeamsNotifier, sendTeamsNotification } from './integrations/teams.js';
 export { JiraIntegration, processJiraIssues } from './integrations/jira.js';
+export { sendAllNotifications, NOTIFICATION_CHANNELS } from './integrations/index.js';
+export type {
+  NotificationChannel,
+  NotificationChannelResult,
+  JiraIssueResult,
+} from './integrations/index.js';
 export { fetchJiraContext, parseJiraKey, JiraContextError } from './integrations/jira-context.js';
 export { fetchFigmaContext, parseFigmaUrl, FigmaContextError } from './integrations/figma-context.js';
 
