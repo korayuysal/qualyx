@@ -324,6 +324,7 @@ export class Executor {
       environment: this.options.environment,
       credentials: this.resolveCredentials(app),
       collectMetrics: this.options.collectMetrics,
+      mailosaur: this.config.integrations?.mailosaur,
     };
   }
 

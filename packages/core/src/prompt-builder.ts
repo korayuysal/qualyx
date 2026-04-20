@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import Handlebars from 'handlebars';
 import type { App, Rule, Step, PromptContext } from './types/index.js';
 import { getEnvironmentUrl } from './config-loader.js';
+import { buildMailosaurPromptHint } from './integrations/mailosaur.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -100,6 +101,9 @@ export function buildPrompt(context: PromptContext): string {
     previousAttempt: context.previousAttempt,
     screenshotConfig: context.app.screenshots,
     collectMetrics: context.collectMetrics,
+    mailosaur: context.mailosaur
+      ? buildMailosaurPromptHint(context.mailosaur, { maskApiKey: true })
+      : undefined,
   };
 
   return template(templateData);
@@ -123,6 +127,9 @@ export function buildExecutionPrompt(context: PromptContext): string {
     previousAttempt: context.previousAttempt,
     screenshotConfig: context.app.screenshots,
     collectMetrics: context.collectMetrics,
+    mailosaur: context.mailosaur
+      ? buildMailosaurPromptHint(context.mailosaur, { maskApiKey: false })
+      : undefined,
   };
 
   return template(templateData);
