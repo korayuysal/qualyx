@@ -344,13 +344,19 @@ export class JiraIntegration {
   }
 }
 
+export interface JiraIssueResult {
+  testId: string;
+  action: 'created' | 'commented';
+  issueKey: string;
+}
+
 /**
  * Process test failures and create/update Jira issues.
  */
 export async function processJiraIssues(
   runResult: RunResult,
   config: QualyxConfig
-): Promise<Array<{ testId: string; action: 'created' | 'commented'; issueKey: string }>> {
+): Promise<JiraIssueResult[]> {
   const jiraConfig = config.integrations?.jira;
 
   if (!jiraConfig) {

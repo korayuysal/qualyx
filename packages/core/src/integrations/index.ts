@@ -2,48 +2,58 @@ import type { QualyxConfig, RunResult } from '../types/index.js';
 import { sendSlackNotification } from './slack.js';
 import { sendEmailNotification } from './email.js';
 import { sendTeamsNotification } from './teams.js';
-import { processJiraIssues } from './jira.js';
+import { processJiraIssues, type JiraIssueResult } from './jira.js';
 
 export { SlackNotifier, sendSlackNotification } from './slack.js';
 export { EmailNotifier, sendEmailNotification } from './email.js';
 export { TeamsNotifier, sendTeamsNotification } from './teams.js';
 export { JiraIntegration, processJiraIssues } from './jira.js';
+export type { JiraIssueResult } from './jira.js';
 
-export interface NotificationChannelResult {
-  channel: 'slack' | 'email' | 'teams' | 'jira';
-  ok: boolean;
-  error?: string;
-  jiraIssues?: Array<{ testId: string; action: 'created' | 'commented'; issueKey: string }>;
-}
+export const NOTIFICATION_CHANNELS = ['slack', 'email', 'teams', 'jira'] as const;
+export type NotificationChannel = typeof NOTIFICATION_CHANNELS[number];
+
+export type NotificationChannelResult =
+  | { channel: 'slack' | 'email' | 'teams'; ok: true }
+  | { channel: 'slack' | 'email' | 'teams'; ok: false; error: string }
+  | { channel: 'jira'; ok: true; jiraIssues: JiraIssueResult[] }
+  | { channel: 'jira'; ok: false; error: string };
 
 export async function sendAllNotifications(
   runResult: RunResult,
   config: QualyxConfig,
   reportUrl?: string,
 ): Promise<NotificationChannelResult[]> {
+  const webhookHandlers: Array<{
+    channel: 'slack' | 'email' | 'teams';
+    enabled: boolean;
+    send: () => Promise<void>;
+  }> = [
+    {
+      channel: 'slack',
+      enabled: !!config.notifications?.slack,
+      send: () => sendSlackNotification(runResult, config, reportUrl),
+    },
+    {
+      channel: 'email',
+      enabled: !!config.notifications?.email,
+      send: () => sendEmailNotification(runResult, config, reportUrl),
+    },
+    {
+      channel: 'teams',
+      enabled: !!config.notifications?.teams,
+      send: () => sendTeamsNotification(runResult, config, reportUrl),
+    },
+  ];
+
   const tasks: Array<Promise<NotificationChannelResult>> = [];
 
-  if (config.notifications?.slack) {
+  for (const h of webhookHandlers) {
+    if (!h.enabled) continue;
     tasks.push(
-      sendSlackNotification(runResult, config, reportUrl)
-        .then<NotificationChannelResult>(() => ({ channel: 'slack', ok: true }))
-        .catch((e) => ({ channel: 'slack', ok: false, error: toMessage(e) })),
-    );
-  }
-
-  if (config.notifications?.email) {
-    tasks.push(
-      sendEmailNotification(runResult, config, reportUrl)
-        .then<NotificationChannelResult>(() => ({ channel: 'email', ok: true }))
-        .catch((e) => ({ channel: 'email', ok: false, error: toMessage(e) })),
-    );
-  }
-
-  if (config.notifications?.teams) {
-    tasks.push(
-      sendTeamsNotification(runResult, config, reportUrl)
-        .then<NotificationChannelResult>(() => ({ channel: 'teams', ok: true }))
-        .catch((e) => ({ channel: 'teams', ok: false, error: toMessage(e) })),
+      h.send()
+        .then<NotificationChannelResult>(() => ({ channel: h.channel, ok: true }))
+        .catch((e) => ({ channel: h.channel, ok: false, error: toMessage(e) })),
     );
   }
 
