@@ -22,6 +22,11 @@ export type {
   NotificationChannelResult,
   JiraIssueResult,
 } from './integrations/index.js';
+export {
+  MailosaurNotifier,
+  sendMailosaurNotification,
+  buildMailosaurPromptHint,
+} from './integrations/mailosaur.js';
 export { fetchJiraContext, parseJiraKey, JiraContextError } from './integrations/jira-context.js';
 export { fetchFigmaContext, parseFigmaUrl, FigmaContextError } from './integrations/figma-context.js';
 

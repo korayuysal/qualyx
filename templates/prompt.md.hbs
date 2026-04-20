@@ -22,6 +22,28 @@ This website is in **{{app.locale}}** language. All buttons, labels, menus, erro
 {{/each}}
 {{/if}}
 
+{{#if mailosaur}}
+## Mailosaur Inbox (for email/SMS verification)
+
+This scenario can verify emails and SMS messages sent by the app. A Mailosaur test server is configured:
+
+- **Server ID:** `{{mailosaur.serverId}}`
+- **API key:** `{{mailosaur.apiKeyHint}}` (full key available in the `MAILOSAUR_API_KEY` env var at runtime)
+{{#if mailosaur.defaultInbox}}
+- **Default inbox:** `{{mailosaur.defaultInbox}}`
+{{/if}}
+
+To check for a received message, call the Mailosaur REST API:
+
+```
+GET https://mailosaur.com/api/messages/search?server={{mailosaur.serverId}}
+Authorization: Basic <base64(api_key + ":")>
+Body: { "sentTo": "<inbox>", "subject": "<optional>", "body": "<optional>" }
+```
+
+Use this only when a test step requires verifying an app-sent email or SMS. Do not poll forever — respect the step's timeout.
+{{/if}}
+
 {{#if previousAttempt}}
 ## Previous Attempt Failed
 **Error:** {{previousAttempt.error}}

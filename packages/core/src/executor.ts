@@ -11,6 +11,7 @@ import type {
 } from './types/index.js';
 import { getApp, getRule, getEnvironmentUrl, getAppSetup } from './config-loader.js';
 import { buildExecutionPrompt, buildDryRunPrompt } from './prompt-builder.js';
+import { buildMailosaurPromptHint } from './integrations/mailosaur.js';
 import { runClaude, isClaudeAvailable } from './claude-runner.js';
 import {
   shouldRetry,
@@ -318,12 +319,16 @@ export class Executor {
    * Build the prompt context for a test.
    */
   private buildContext(app: App, rule: Rule): PromptContext {
+    const mailosaurIntegration = this.config.integrations?.mailosaur;
     return {
       app,
       rule,
       environment: this.options.environment,
       credentials: this.resolveCredentials(app),
       collectMetrics: this.options.collectMetrics,
+      mailosaur: mailosaurIntegration
+        ? buildMailosaurPromptHint(mailosaurIntegration)
+        : undefined,
     };
   }
 

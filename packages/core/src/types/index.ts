@@ -103,14 +103,31 @@ export const JiraConfigSchema = z.object({
   components: z.array(z.string()).optional(),
 });
 
+export const MailosaurNotificationConfigSchema = z.object({
+  api_key: z.string().min(1),
+  server_id: z.string().min(1),
+  to: z.string().email(), // verified address or a Mailosaur server inbox
+  on_failure: z.boolean().default(true),
+  on_success: z.boolean().default(false),
+  subject_prefix: z.string().default('[Qualyx]'),
+});
+
+export const MailosaurIntegrationConfigSchema = z.object({
+  api_key: z.string().min(1),
+  server_id: z.string().min(1),
+  default_inbox: z.string().optional(), // e.g. test-inbox@xyz.mailosaur.net
+});
+
 export const NotificationsSchema = z.object({
   slack: SlackConfigSchema.optional(),
   email: EmailConfigSchema.optional(),
   teams: TeamsConfigSchema.optional(),
+  mailosaur: MailosaurNotificationConfigSchema.optional(),
 });
 
 export const IntegrationsSchema = z.object({
   jira: JiraConfigSchema.optional(),
+  mailosaur: MailosaurIntegrationConfigSchema.optional(),
 });
 
 export const QualyxConfigSchema = z.object({
@@ -135,6 +152,8 @@ export type SlackConfig = z.infer<typeof SlackConfigSchema>;
 export type EmailConfig = z.infer<typeof EmailConfigSchema>;
 export type TeamsConfig = z.infer<typeof TeamsConfigSchema>;
 export type JiraConfig = z.infer<typeof JiraConfigSchema>;
+export type MailosaurNotificationConfig = z.infer<typeof MailosaurNotificationConfigSchema>;
+export type MailosaurIntegrationConfig = z.infer<typeof MailosaurIntegrationConfigSchema>;
 export type Notifications = z.infer<typeof NotificationsSchema>;
 export type Integrations = z.infer<typeof IntegrationsSchema>;
 export type QualyxConfig = z.infer<typeof QualyxConfigSchema>;
@@ -224,6 +243,12 @@ export interface ClaudeResponse {
 // Prompt Builder Types
 // ============================================================
 
+export interface MailosaurPromptHint {
+  serverId: string;
+  defaultInbox?: string;
+  apiKeyHint: string;
+}
+
 export interface PromptContext {
   app: App;
   rule: Rule;
@@ -235,6 +260,7 @@ export interface PromptContext {
     domSnippet?: string;
   };
   collectMetrics?: boolean;
+  mailosaur?: MailosaurPromptHint;
 }
 
 // ============================================================

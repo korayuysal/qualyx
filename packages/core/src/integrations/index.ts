@@ -2,20 +2,28 @@ import type { QualyxConfig, RunResult } from '../types/index.js';
 import { sendSlackNotification } from './slack.js';
 import { sendEmailNotification } from './email.js';
 import { sendTeamsNotification } from './teams.js';
+import { sendMailosaurNotification } from './mailosaur.js';
 import { processJiraIssues, type JiraIssueResult } from './jira.js';
 
 export { SlackNotifier, sendSlackNotification } from './slack.js';
 export { EmailNotifier, sendEmailNotification } from './email.js';
 export { TeamsNotifier, sendTeamsNotification } from './teams.js';
+export {
+  MailosaurNotifier,
+  sendMailosaurNotification,
+  buildMailosaurPromptHint,
+} from './mailosaur.js';
 export { JiraIntegration, processJiraIssues } from './jira.js';
 export type { JiraIssueResult } from './jira.js';
 
-export const NOTIFICATION_CHANNELS = ['slack', 'email', 'teams', 'jira'] as const;
+export const NOTIFICATION_CHANNELS = ['slack', 'email', 'teams', 'mailosaur', 'jira'] as const;
 export type NotificationChannel = typeof NOTIFICATION_CHANNELS[number];
 
+type WebhookChannel = 'slack' | 'email' | 'teams' | 'mailosaur';
+
 export type NotificationChannelResult =
-  | { channel: 'slack' | 'email' | 'teams'; ok: true }
-  | { channel: 'slack' | 'email' | 'teams'; ok: false; error: string }
+  | { channel: WebhookChannel; ok: true }
+  | { channel: WebhookChannel; ok: false; error: string }
   | { channel: 'jira'; ok: true; jiraIssues: JiraIssueResult[] }
   | { channel: 'jira'; ok: false; error: string };
 
@@ -25,7 +33,7 @@ export async function sendAllNotifications(
   reportUrl?: string,
 ): Promise<NotificationChannelResult[]> {
   const webhookHandlers: Array<{
-    channel: 'slack' | 'email' | 'teams';
+    channel: WebhookChannel;
     enabled: boolean;
     send: () => Promise<void>;
   }> = [
@@ -43,6 +51,11 @@ export async function sendAllNotifications(
       channel: 'teams',
       enabled: !!config.notifications?.teams,
       send: () => sendTeamsNotification(runResult, config, reportUrl),
+    },
+    {
+      channel: 'mailosaur',
+      enabled: !!config.notifications?.mailosaur,
+      send: () => sendMailosaurNotification(runResult, config, reportUrl),
     },
   ];
 

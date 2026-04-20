@@ -100,6 +100,7 @@ export function buildPrompt(context: PromptContext): string {
     previousAttempt: context.previousAttempt,
     screenshotConfig: context.app.screenshots,
     collectMetrics: context.collectMetrics,
+    mailosaur: context.mailosaur,
   };
 
   return template(templateData);
@@ -123,6 +124,7 @@ export function buildExecutionPrompt(context: PromptContext): string {
     previousAttempt: context.previousAttempt,
     screenshotConfig: context.app.screenshots,
     collectMetrics: context.collectMetrics,
+    mailosaur: context.mailosaur,
   };
 
   return template(templateData);
