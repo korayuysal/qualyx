@@ -5,6 +5,7 @@ import {
   parseConfigFromYaml,
   getDb,
   schema,
+  sendAllNotifications,
 } from '@qualyx/core';
 import type { RunScenarioJob } from './queue.js';
 
@@ -149,6 +150,17 @@ async function processJob(job: PgBoss.Job<RunScenarioJob>): Promise<void> {
       .where(eq(schema.runs.id, runId));
 
     console.log(`[job:${runId}] Run complete: ${runResult.passed}/${runResult.totalTests} passed`);
+
+    const appUrl = process.env.APP_URL || process.env.AUTH_URL;
+    const reportUrl = appUrl ? `${appUrl.replace(/\/$/, '')}/runs/${runId}` : undefined;
+    const outcomes = await sendAllNotifications(runResult, config, reportUrl);
+    for (const o of outcomes) {
+      if (o.ok) {
+        console.log(`[job:${runId}] notification ${o.channel}: ok`);
+      } else {
+        console.warn(`[job:${runId}] notification ${o.channel} failed: ${o.error}`);
+      }
+    }
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
 
