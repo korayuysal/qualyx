@@ -1,7 +1,54 @@
+name: qualyx
+
 services:
-  qualyx:
-    build: .
+  web:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.web
+    restart: unless-stopped
     env_file: .env
+    environment:
+      AUTH_URL: https://${DOMAIN}
+    networks:
+      - internal
+    expose:
+      - "3000"
+
+  worker:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.worker
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      APP_URL: https://${DOMAIN}
+    networks:
+      - internal
     volumes:
-      - ./reports:/app/qualyx-reports
-      - ./data:/app/.qualyx
+      # Claude Max credentials. Copy ~/.claude from your laptop into
+      # ./claude-home/.claude on the VPS before starting the worker.
+      - ./claude-home:/home/qualyx:ro
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN: ${DOMAIN}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - web
+    networks:
+      - internal
+
+networks:
+  internal:
+
+volumes:
+  caddy_data:
+  caddy_config:

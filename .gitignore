@@ -50,3 +50,8 @@ examples/blue-style/
 
 # Old src/ directory (migrated to packages/)
 /src/
+
+# Local deploy state (Claude creds copy, Caddy data). .env handled above.
+/deploy/claude-home/
+/deploy/caddy_data/
+/deploy/caddy_config/
