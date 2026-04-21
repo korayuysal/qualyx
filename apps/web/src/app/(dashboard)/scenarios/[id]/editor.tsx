@@ -7,7 +7,9 @@ interface Scenario {
   id: string;
   name: string;
   description: string | null;
-  yamlContent: string;
+  prompt: string | null;
+  url: string | null;
+  yamlContent: string | null;
   updatedAt: Date;
 }
 
@@ -29,9 +31,13 @@ export function ScenarioEditor({
   recentRuns: Run[];
 }) {
   const router = useRouter();
+
   const [name, setName] = useState(scenario.name);
   const [description, setDescription] = useState(scenario.description || '');
-  const [yaml, setYaml] = useState(scenario.yamlContent);
+  const [url, setUrl] = useState(scenario.url || '');
+  const [prompt, setPrompt] = useState(scenario.prompt || '');
+  const [yaml, setYaml] = useState(scenario.yamlContent || '');
+  const [advancedOpen, setAdvancedOpen] = useState(scenario.prompt === null);
   const [saving, setSaving] = useState(false);
   const [running, setRunning] = useState(false);
   const [message, setMessage] = useState('');
@@ -40,10 +46,18 @@ export function ScenarioEditor({
     setSaving(true);
     setMessage('');
 
+    const body: Record<string, unknown> = { name, description };
+    if (advancedOpen) {
+      body.yamlContent = yaml;
+    } else {
+      body.url = url;
+      body.prompt = prompt;
+    }
+
     const res = await fetch(`/api/scenarios/${scenario.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, description, yamlContent: yaml }),
+      body: JSON.stringify(body),
     });
 
     if (res.ok) {
@@ -152,18 +166,54 @@ export function ScenarioEditor({
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-300">
-              Configuration (YAML)
-            </label>
-            <textarea
-              value={yaml}
-              onChange={(e) => setYaml(e.target.value)}
-              rows={30}
-              className="mt-1 block w-full rounded-md border border-gray-700 bg-gray-900 px-3 py-2 font-mono text-sm text-gray-100 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-              spellCheck={false}
-            />
-          </div>
+          {!advancedOpen && (
+            <>
+              <div>
+                <label className="block text-sm font-medium text-gray-300">Website</label>
+                <input
+                  type="url"
+                  value={url}
+                  onChange={(e) => setUrl(e.target.value)}
+                  className="mt-1 block w-full rounded-md border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-gray-100 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  placeholder="https://flights.google.com"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-300">
+                  What do you want to verify?
+                </label>
+                <textarea
+                  value={prompt}
+                  onChange={(e) => setPrompt(e.target.value)}
+                  rows={12}
+                  className="mt-1 block w-full rounded-md border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-gray-100 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
+            </>
+          )}
+
+          <details
+            className="rounded-md border border-gray-800 bg-gray-950/50"
+            open={advancedOpen}
+            onToggle={(e) => setAdvancedOpen((e.target as HTMLDetailsElement).open)}
+          >
+            <summary className="cursor-pointer select-none px-3 py-2 text-sm text-gray-400 hover:text-gray-200">
+              Advanced: edit as YAML
+            </summary>
+            <div className="border-t border-gray-800 p-3">
+              <p className="mb-2 text-xs text-gray-500">
+                Power users only. When this section is open, saving submits the YAML below instead of the prompt form.
+              </p>
+              <textarea
+                value={yaml}
+                onChange={(e) => setYaml(e.target.value)}
+                rows={30}
+                className="block w-full rounded-md border border-gray-700 bg-gray-900 px-3 py-2 font-mono text-xs text-gray-100 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                spellCheck={false}
+              />
+            </div>
+          </details>
         </div>
 
         <div className="space-y-4">
