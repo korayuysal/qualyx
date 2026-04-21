@@ -1,36 +1,29 @@
-# ---- deps: install all workspace deps ----
-FROM node:20-bookworm-slim AS deps
-WORKDIR /app
+# syntax=docker/dockerfile:1.7
+ARG NODE_IMAGE=node:20-bookworm-slim
 
+FROM ${NODE_IMAGE} AS deps
+WORKDIR /app
 COPY package.json package-lock.json ./
 COPY apps/web/package.json ./apps/web/
 COPY packages/core/package.json ./packages/core/
 COPY packages/cli/package.json ./packages/cli/
 COPY packages/worker/package.json ./packages/worker/
+RUN --mount=type=cache,target=/root/.npm npm ci
 
-RUN npm ci
-
-# ---- build: compile core + build Next.js in standalone mode ----
-FROM node:20-bookworm-slim AS build
+FROM ${NODE_IMAGE} AS build
 WORKDIR /app
-
 COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/apps/web/node_modules ./apps/web/node_modules
-COPY --from=deps /app/packages/core/node_modules ./packages/core/node_modules
-
-COPY package.json package-lock.json ./
-COPY tsconfig.json ./
+COPY package.json package-lock.json tsconfig.json ./
 COPY apps/web ./apps/web
 COPY packages/core ./packages/core
+ENV NEXT_TELEMETRY_DISABLED=1
+RUN npm run build -w @qualyx/core && npm run build -w web
 
-RUN npm run build -w @qualyx/core
-RUN npm run build -w web
-
-# ---- runtime: minimal image with only the Next.js standalone server ----
-FROM node:20-bookworm-slim AS runtime
+FROM ${NODE_IMAGE} AS runtime
 WORKDIR /app
 
 ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
 

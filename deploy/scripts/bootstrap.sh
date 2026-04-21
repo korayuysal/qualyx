@@ -9,17 +9,10 @@ DEPLOY_USER="${DEPLOY_USER:-qualyx}"
 
 echo "==> Installing system packages"
 apt-get update
-apt-get install -y ca-certificates curl gnupg git ufw
+apt-get install -y ca-certificates curl git ufw postgresql-client
 
 echo "==> Installing Docker Engine + Compose plugin"
-install -m 0755 -d /etc/apt/keyrings
-curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-chmod a+r /etc/apt/keyrings/docker.gpg
-. /etc/os-release
-echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] \
-https://download.docker.com/linux/$ID $VERSION_CODENAME stable" > /etc/apt/sources.list.d/docker.list
-apt-get update
-apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+curl -fsSL https://get.docker.com | sh
 systemctl enable --now docker
 
 echo "==> Creating deploy user '$DEPLOY_USER'"
@@ -56,6 +49,8 @@ cat <<EOF
      docker compose up -d --build
 
   5. Apply DB migrations against Supabase:
-     psql "\$DATABASE_URL_DIRECT" -f ../packages/core/drizzle/*.sql
+     for sql in $INSTALL_DIR/packages/core/drizzle/*.sql; do
+       psql "\$DATABASE_URL_DIRECT" -v ON_ERROR_STOP=1 -f "\$sql"
+     done
 
 EOF
