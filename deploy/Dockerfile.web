@@ -1,0 +1,47 @@
+# ---- deps: install all workspace deps ----
+FROM node:20-bookworm-slim AS deps
+WORKDIR /app
+
+COPY package.json package-lock.json ./
+COPY apps/web/package.json ./apps/web/
+COPY packages/core/package.json ./packages/core/
+COPY packages/cli/package.json ./packages/cli/
+COPY packages/worker/package.json ./packages/worker/
+
+RUN npm ci
+
+# ---- build: compile core + build Next.js in standalone mode ----
+FROM node:20-bookworm-slim AS build
+WORKDIR /app
+
+COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/apps/web/node_modules ./apps/web/node_modules
+COPY --from=deps /app/packages/core/node_modules ./packages/core/node_modules
+
+COPY package.json package-lock.json ./
+COPY tsconfig.json ./
+COPY apps/web ./apps/web
+COPY packages/core ./packages/core
+
+RUN npm run build -w @qualyx/core
+RUN npm run build -w web
+
+# ---- runtime: minimal image with only the Next.js standalone server ----
+FROM node:20-bookworm-slim AS runtime
+WORKDIR /app
+
+ENV NODE_ENV=production
+ENV PORT=3000
+ENV HOSTNAME=0.0.0.0
+
+RUN addgroup --system --gid 1001 nodejs \
+ && adduser --system --uid 1001 --ingroup nodejs nextjs
+
+COPY --from=build --chown=nextjs:nodejs /app/apps/web/.next/standalone ./
+COPY --from=build --chown=nextjs:nodejs /app/apps/web/.next/static ./apps/web/.next/static
+COPY --from=build --chown=nextjs:nodejs /app/apps/web/public ./apps/web/public
+
+USER nextjs
+EXPOSE 3000
+
+CMD ["node", "apps/web/server.js"]

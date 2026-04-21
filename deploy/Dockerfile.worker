@@ -1,0 +1,47 @@
+# Playwright base — already ships with browsers + system deps
+FROM mcr.microsoft.com/playwright:v1.49.0-noble AS deps
+WORKDIR /app
+
+COPY package.json package-lock.json ./
+COPY apps/web/package.json ./apps/web/
+COPY packages/core/package.json ./packages/core/
+COPY packages/cli/package.json ./packages/cli/
+COPY packages/worker/package.json ./packages/worker/
+
+RUN npm ci
+
+# ---- build core + worker ----
+FROM mcr.microsoft.com/playwright:v1.49.0-noble AS build
+WORKDIR /app
+
+COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/packages/core/node_modules ./packages/core/node_modules
+COPY --from=deps /app/packages/worker/node_modules ./packages/worker/node_modules
+
+COPY package.json package-lock.json tsconfig.json ./
+COPY packages/core ./packages/core
+COPY packages/worker ./packages/worker
+
+RUN npm run build -w @qualyx/core
+RUN npm run build -w @qualyx/worker
+
+# ---- runtime ----
+FROM mcr.microsoft.com/playwright:v1.49.0-noble AS runtime
+WORKDIR /app
+
+ENV NODE_ENV=production
+# The Claude Code CLI reads auth from $HOME/.claude. Mount credentials
+# into /home/qualyx/.claude at runtime (read-only OK).
+ENV HOME=/home/qualyx
+
+RUN useradd --create-home --uid 1001 --shell /bin/bash qualyx \
+ && npm install -g @anthropic-ai/claude-code
+
+COPY --from=build --chown=qualyx:qualyx /app/package.json /app/package-lock.json ./
+COPY --from=build --chown=qualyx:qualyx /app/node_modules ./node_modules
+COPY --from=build --chown=qualyx:qualyx /app/packages/core ./packages/core
+COPY --from=build --chown=qualyx:qualyx /app/packages/worker ./packages/worker
+
+USER qualyx
+
+CMD ["node", "packages/worker/dist/index.js"]

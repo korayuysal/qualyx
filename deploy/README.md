@@ -1,182 +1,137 @@
-# Qualyx Deployment Guide
+# Qualyx Deployment
 
-Three options for running Qualyx on a schedule. Pick whichever fits your infrastructure.
+Production deployment of the Qualyx platform (web + worker + Caddy) on a single Hetzner VPS, using Docker Compose and Supabase for the database.
 
----
+## Topology
 
-## Option A: VPS with Cron (simplest, cheapest)
+```
+  Internet
+     │
+     ▼
+  ┌─────────────┐
+  │ Caddy (TLS) │  :80 / :443
+  └──────┬──────┘
+         │
+         ▼
+  ┌──────────┐   ┌──────────┐
+  │ web      │   │ worker   │
+  │ (Next.js)│   │ (pg-boss │
+  │          │   │  + claude│
+  │          │   │  CLI)    │
+  └────┬─────┘   └─────┬────┘
+       │               │
+       └──────┬────────┘
+              │
+              ▼
+      Supabase (Postgres)
+```
 
-### Requirements
+The web and worker both talk to Supabase. pg-boss rides on the same Postgres — no separate queue broker. The worker shells out to the Claude Code CLI, which authenticates via credentials mounted at `/home/qualyx/.claude` (copied from your laptop's Claude Max login).
 
-- Ubuntu 22.04+ (or any Linux with Node.js support)
-- 2 vCPU, 4 GB RAM minimum (Playwright + Chromium need headroom)
-- Node.js 20+
+## Prerequisites
 
-### Setup
+- A Hetzner VPS (CX32 or better — 4 vCPU / 8 GB RAM is comfortable headroom for Playwright)
+- Ubuntu 24.04 LTS
+- Root SSH access
+- A domain name you control, with an A record pointing at the VPS public IP
+- The Qualyx Supabase project's connection string (session pooler + direct)
+- Your Claude Max login on your laptop (the `~/.claude/` directory)
+
+## First-time setup
+
+On the VPS, as root:
 
 ```bash
-# Install Qualyx and dependencies
-npm install -g qualyx @anthropic-ai/claude-code
-npx playwright install --with-deps chromium
+curl -fsSL https://raw.githubusercontent.com/korayuysal/qualyx/main/deploy/scripts/bootstrap.sh | bash
+```
 
-# Create working directory
-sudo mkdir -p /opt/qualyx
-sudo chown $USER:$USER /opt/qualyx
+That script installs Docker, creates a `qualyx` user, clones the repo to `/opt/qualyx`, and opens ports 22/80/443 via UFW.
+
+From your laptop, copy your Claude Max credentials over:
+
+```bash
+scp -r ~/.claude qualyx@<vps-ip>:/opt/qualyx/deploy/claude-home/
+```
+
+On the VPS, as `qualyx`:
+
+```bash
+cd /opt/qualyx/deploy
+cp .env.example .env
+# edit .env — fill in DOMAIN, DATABASE_URL, DATABASE_URL_DIRECT, AUTH_SECRET
+```
+
+Apply the database schema (first time only, or whenever migrations change):
+
+```bash
+for sql in /opt/qualyx/packages/core/drizzle/*.sql; do
+  psql "$DATABASE_URL_DIRECT" -v ON_ERROR_STOP=1 -f "$sql"
+done
+```
+
+Start everything:
+
+```bash
+cd /opt/qualyx/deploy
+docker compose up -d --build
+docker compose logs -f
+```
+
+Visit `https://<DOMAIN>` once DNS has propagated — Caddy will issue a Let's Encrypt cert automatically.
+
+## Updates
+
+GitHub Actions runs `deploy/scripts/deploy.sh` on every push to `main`. It's a thin wrapper around `git pull && docker compose up -d --build`.
+
+Manual deploy (useful for testing a branch on the VPS):
+
+```bash
+ssh qualyx@<vps-ip>
 cd /opt/qualyx
-
-# Copy your config
-cp /path/to/qualyx.yml .
-
-# Create .env with your settings
-cat > .env << 'EOF'
-# Optional — uncomment when ready:
-# SMTP_HOST=smtp.gmail.com
-# SMTP_USER=you@gmail.com
-# SMTP_PASS=app-password
-# SLACK_WEBHOOK_URL=https://hooks.slack.com/services/...
-# JIRA_EMAIL=you@company.com
-# JIRA_API_TOKEN=...
-EOF
-chmod 600 .env
+bash deploy/scripts/deploy.sh
 ```
 
-### Cron Setup
+## GitHub Actions secrets
 
-Generate crontab entries from your config:
+Configure these on the `production` environment in the GitHub repo settings:
+
+| Secret            | Value                                                        |
+| ----------------- | ------------------------------------------------------------ |
+| `SSH_HOST`        | VPS public IP or hostname                                    |
+| `SSH_USER`        | `qualyx`                                                     |
+| `SSH_PRIVATE_KEY` | Contents of a private key whose public half is in the user's `~/.ssh/authorized_keys` on the VPS |
+
+## Debugging
 
 ```bash
-qualyx schedule cron
+# tail everything
+docker compose logs -f
+
+# one service
+docker compose logs -f worker
+
+# one-off shell inside web
+docker compose exec web sh
+
+# check Caddy config / certs
+docker compose exec caddy caddy validate --config /etc/caddy/Caddyfile
+docker compose exec caddy ls /data/caddy/certificates
+
+# claude auth sanity check from the worker
+docker compose exec worker claude --help
 ```
 
-Or use the wrapper script:
+## Claude Max credential rotation
+
+OAuth tokens in `~/.claude/` refresh themselves on use, but they can be revoked server-side. If the worker starts failing with auth errors:
 
 ```bash
-cp deploy/run-daily.sh /opt/qualyx/
-chmod +x /opt/qualyx/run-daily.sh
-
-# Add to crontab
-crontab -e
-# Daily at 7 AM:
-# 0 7 * * * /opt/qualyx/run-daily.sh
+# on your laptop — re-login, then resync
+claude login
+scp -r ~/.claude qualyx@<vps-ip>:/opt/qualyx/deploy/claude-home/
+ssh qualyx@<vps-ip> "cd /opt/qualyx/deploy && docker compose restart worker"
 ```
 
-### Log Rotation
+## Backups
 
-```bash
-sudo tee /etc/logrotate.d/qualyx << 'EOF'
-/var/log/qualyx/*.log {
-    daily
-    rotate 14
-    compress
-    missingok
-    notifempty
-}
-EOF
-
-sudo mkdir -p /var/log/qualyx
-sudo chown $USER:$USER /var/log/qualyx
-```
-
----
-
-## Option B: GitHub Actions (zero infrastructure)
-
-Generate the workflow file:
-
-```bash
-qualyx schedule github --output .github/workflows/qualyx-qa.yml
-```
-
-Or create it manually:
-
-```yaml
-# .github/workflows/qualyx-qa.yml
-name: Qualyx QA
-
-on:
-  schedule:
-    - cron: '0 7 * * *'    # Daily at 7 AM UTC
-  workflow_dispatch:         # Manual trigger
-
-jobs:
-  qa-run:
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-
-      - name: Install dependencies
-        run: |
-          npm install -g qualyx @anthropic-ai/claude-code
-          npx playwright install --with-deps chromium
-
-      - name: Run QA suite
-        run: |
-          qualyx run --parallel --max-parallel 3 --report --collect-metrics
-
-      - name: Upload reports
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: qualyx-reports-${{ github.run_number }}
-          path: |
-            qualyx-reports/
-            .qualyx/
-          retention-days: 30
-```
-
-### Trade-offs
-
-- Uses CI minutes
-- No persistent history DB across runs (each run starts fresh)
-- Reports available as downloadable artifacts
-
----
-
-## Option C: Docker (portable)
-
-### Build and Run
-
-```bash
-cd deploy/
-
-# Build
-docker compose build
-
-# Run once
-docker compose run --rm qualyx
-
-# Run detached with cron inside container
-docker compose up -d
-```
-
-### Deploying to Cloud
-
-The Docker image works on any Docker host:
-
-- **AWS ECS / Fargate** — push to ECR, create task definition
-- **GCP Cloud Run** — push to Artifact Registry, create scheduled job
-- **DigitalOcean App Platform** — connect repo, set env vars
-- **Any VPS** — install Docker, `docker compose up -d`
-
-### Volumes
-
-- `./reports` — HTML reports and screenshots (mounted from host)
-- `./data` — SQLite history database (persisted across runs)
-
----
-
-## Environment Variables
-
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `SMTP_HOST` | No | SMTP server for email reports |
-| `SMTP_USER` | No | SMTP username |
-| `SMTP_PASS` | No | SMTP password |
-| `SLACK_WEBHOOK_URL` | No | Slack incoming webhook URL |
-| `JIRA_EMAIL` | No | Jira account email |
-| `JIRA_API_TOKEN` | No | Jira API token |
+Supabase handles Postgres backups. The VPS itself is stateless — everything Qualyx writes lives in Postgres (via pg-boss + Drizzle) or in Caddy's TLS cert volumes. Rebuild the box from scratch if it dies.
