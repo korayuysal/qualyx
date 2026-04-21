@@ -1,0 +1,33 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+      - run: npm ci
+      - name: Typecheck core
+        run: npx tsc --noEmit -p packages/core/tsconfig.json
+      - name: Typecheck worker
+        run: npx tsc --noEmit -p packages/worker/tsconfig.json
+      - name: Unit tests
+        run: npx vitest --run
+      - name: Build core
+        run: npm run build -w @qualyx/core
+      - name: Build worker
+        run: npm run build -w @qualyx/worker
+      - name: Build web
+        run: npm run build -w web
