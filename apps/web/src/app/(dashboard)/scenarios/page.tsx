@@ -15,7 +15,7 @@ export default async function ScenariosPage() {
         <div>
           <h1 className="text-2xl font-bold">Scenarios</h1>
           <p className="mt-1 text-sm text-gray-400">
-            Define test scenarios in YAML
+            Describe what you want to verify
           </p>
         </div>
         <Link

@@ -7,7 +7,9 @@ import {
   jsonb,
   index,
   uuid,
+  check,
 } from 'drizzle-orm/pg-core';
+import { sql } from 'drizzle-orm';
 
 // ============================================================
 // Users
@@ -41,13 +43,19 @@ export const scenarios = pgTable('scenarios', {
   id: uuid('id').primaryKey().defaultRandom(),
   name: text('name').notNull(),
   description: text('description'),
-  yamlContent: text('yaml_content').notNull(),
+  prompt: text('prompt'),
+  url: text('url'),
+  yamlContent: text('yaml_content'),
   createdBy: uuid('created_by').references(() => users.id),
   updatedBy: uuid('updated_by').references(() => users.id),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 }, (table) => [
   index('idx_scenarios_created_by').on(table.createdBy),
+  check(
+    'scenarios_prompt_or_yaml',
+    sql`(${table.prompt} IS NOT NULL AND ${table.url} IS NOT NULL) OR ${table.yamlContent} IS NOT NULL`,
+  ),
 ]);
 
 // ============================================================

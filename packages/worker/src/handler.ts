@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm';
 import {
   Executor,
   parseConfigFromYaml,
+  configFromPrompt,
   getDb,
   schema,
   sendAllNotifications,
@@ -21,9 +22,13 @@ async function processJob(job: PgBoss.Job<RunScenarioJob>): Promise<void> {
 
   console.log(`[job:${runId}] Starting run for scenario ${scenarioId}`);
 
-  // Fetch the scenario YAML from the database
   const [scenario] = await db
-    .select({ yamlContent: schema.scenarios.yamlContent })
+    .select({
+      name: schema.scenarios.name,
+      prompt: schema.scenarios.prompt,
+      url: schema.scenarios.url,
+      yamlContent: schema.scenarios.yamlContent,
+    })
     .from(schema.scenarios)
     .where(eq(schema.scenarios.id, scenarioId))
     .limit(1);
@@ -41,13 +46,23 @@ async function processJob(job: PgBoss.Job<RunScenarioJob>): Promise<void> {
     return;
   }
 
-  // Parse the YAML into a QualyxConfig
   let config;
   try {
-    const result = parseConfigFromYaml(scenario.yamlContent);
-    config = result.config;
-    if (result.warnings.length > 0) {
-      console.warn(`[job:${runId}] Config warnings:`, result.warnings);
+    if (scenario.prompt && scenario.url) {
+      config = configFromPrompt({
+        name: scenario.name,
+        url: scenario.url,
+        prompt: scenario.prompt,
+        scenarioId,
+      });
+    } else if (scenario.yamlContent) {
+      const result = parseConfigFromYaml(scenario.yamlContent);
+      config = result.config;
+      if (result.warnings.length > 0) {
+        console.warn(`[job:${runId}] Config warnings:`, result.warnings);
+      }
+    } else {
+      throw new Error('Scenario has neither prompt+url nor yamlContent');
     }
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Failed to parse config';

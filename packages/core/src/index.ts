@@ -6,6 +6,8 @@ export { loadConfig, parseConfigFromYaml, findConfigFile, getApp, getRule, getEn
 export type { LoadConfigResult } from './config-loader.js';
 export * from './retry-handler.js';
 export * from './feature-verify-prompt.js';
+export { configFromPrompt, deriveScenarioName, PromptScenarioBodySchema } from './scenario-synth.js';
+export type { PromptScenarioInput, PromptScenarioBody } from './scenario-synth.js';
 
 // Types
 export * from './types/index.js';
