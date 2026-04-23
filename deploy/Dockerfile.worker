@@ -1,47 +1,37 @@
-# Playwright base — already ships with browsers + system deps
-FROM mcr.microsoft.com/playwright:v1.49.0-noble AS deps
-WORKDIR /app
+# syntax=docker/dockerfile:1.7
+ARG PW_IMAGE=mcr.microsoft.com/playwright:v1.49.0-noble
 
+FROM ${PW_IMAGE} AS deps
+WORKDIR /app
 COPY package.json package-lock.json ./
 COPY apps/web/package.json ./apps/web/
 COPY packages/core/package.json ./packages/core/
 COPY packages/cli/package.json ./packages/cli/
 COPY packages/worker/package.json ./packages/worker/
+RUN --mount=type=cache,target=/root/.npm npm ci
 
-RUN npm ci
-
-# ---- build core + worker ----
-FROM mcr.microsoft.com/playwright:v1.49.0-noble AS build
+FROM ${PW_IMAGE} AS build
 WORKDIR /app
-
 COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/packages/core/node_modules ./packages/core/node_modules
-COPY --from=deps /app/packages/worker/node_modules ./packages/worker/node_modules
-
 COPY package.json package-lock.json tsconfig.json ./
 COPY packages/core ./packages/core
 COPY packages/worker ./packages/worker
+RUN npm run build -w @qualyx/core && npm run build -w @qualyx/worker
 
-RUN npm run build -w @qualyx/core
-RUN npm run build -w @qualyx/worker
-
-# ---- runtime ----
-FROM mcr.microsoft.com/playwright:v1.49.0-noble AS runtime
+FROM ${PW_IMAGE} AS runtime
 WORKDIR /app
 
 ENV NODE_ENV=production
-# The Claude Code CLI reads auth from $HOME/.claude. Mount credentials
-# into /home/qualyx/.claude at runtime (read-only OK).
-ENV HOME=/home/qualyx
 
-RUN useradd --create-home --uid 1001 --shell /bin/bash qualyx \
- && npm install -g @anthropic-ai/claude-code
+# Install the Claude Code CLI once; pwuser comes from the Playwright base image.
+RUN npm install -g @anthropic-ai/claude-code
 
-COPY --from=build --chown=qualyx:qualyx /app/package.json /app/package-lock.json ./
-COPY --from=build --chown=qualyx:qualyx /app/node_modules ./node_modules
-COPY --from=build --chown=qualyx:qualyx /app/packages/core ./packages/core
-COPY --from=build --chown=qualyx:qualyx /app/packages/worker ./packages/worker
+COPY --from=build --chown=pwuser:pwuser /app/package.json /app/package-lock.json ./
+COPY --from=build --chown=pwuser:pwuser /app/node_modules ./node_modules
+COPY --from=build --chown=pwuser:pwuser /app/packages/core ./packages/core
+COPY --from=build --chown=pwuser:pwuser /app/packages/worker ./packages/worker
 
-USER qualyx
+# Claude Max auth lives at $HOME/.claude — mount /home/pwuser/.claude at runtime.
+USER pwuser
 
 CMD ["node", "packages/worker/dist/index.js"]

@@ -27,7 +27,7 @@ services:
     volumes:
       # Claude Max credentials. Copy ~/.claude from your laptop into
       # ./claude-home/.claude on the VPS before starting the worker.
-      - ./claude-home:/home/qualyx:ro
+      - ./claude-home:/home/pwuser:ro
 
   caddy:
     image: caddy:2-alpine

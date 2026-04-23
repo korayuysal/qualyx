@@ -16,7 +16,6 @@ git -C .. checkout main
 git -C .. reset --hard origin/main
 
 echo "==> Building and restarting services"
-docker compose pull --ignore-pull-failures || true
 docker compose up -d --build
 
 echo "==> Pruning dangling images"
