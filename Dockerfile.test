@@ -1,0 +1,14 @@
+# Hermetic test image for the software factory's gates (compose.test.yml). Mirrors CI: Node 20, npm ci.
+FROM node:20-bookworm
+WORKDIR /app
+ENV CI=true NEXT_TELEMETRY_DISABLED=1
+# Manifests first, so dependencies are cached until a lockfile or package.json changes.
+COPY package.json package-lock.json ./
+COPY packages/core/package.json packages/core/
+COPY packages/cli/package.json packages/cli/
+COPY packages/worker/package.json packages/worker/
+COPY apps/web/package.json apps/web/
+RUN npm ci
+COPY . .
+# Workspace packages import @qualyx/core from its build output, so build it once here for every gate.
+RUN npm run build -w packages/core

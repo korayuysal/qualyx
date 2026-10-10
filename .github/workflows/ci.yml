@@ -19,6 +19,7 @@ jobs:
           node-version: "20"
           cache: npm
       - run: npm ci
+      - run: npm run build -w packages/core  # other packages import @qualyx/core from its build output
       - run: npm run typecheck
 
   test:
@@ -30,6 +31,7 @@ jobs:
           node-version: "20"
           cache: npm
       - run: npm ci
+      - run: npm run build -w packages/core
       - run: npm test -- --run
 
   build:

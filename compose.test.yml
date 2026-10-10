@@ -1,0 +1,8 @@
+# Hermetic test environment used by the software factory.
+# Gates run as: docker compose -f compose.test.yml run --rm --build test sh -c '<command>'
+services:
+  test:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+    network_mode: none  # tests must not depend on the network
