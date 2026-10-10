@@ -11,7 +11,8 @@ dist/
 *.swo
 
 # Claude Code local tooling
-.claude/
+.claude/*
+!.claude/skills
 
 # OS
 .DS_Store
