@@ -71,5 +71,5 @@ These apply to every agent in every project, whatever the tool or model.
 - Tests only use throwaway local databases and services. Never change or work around the project's test guard.
 
 ## Skills
-In `.agents/skills/` (also `.claude/skills/`): `code-review`. Use `code-review` before handing over a change.
+In `.agents/skills/` (also `.claude/skills/`): `code-review`, `security-audit`. Use `code-review` before handing over a change.
 <!-- /factory:general-rules -->
