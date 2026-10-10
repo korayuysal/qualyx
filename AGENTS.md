@@ -65,12 +65,10 @@ These apply to every agent in every project, whatever the tool or model.
 - If something is unclear, ask instead of guessing.
 
 ### Testing
-- Every behaviour change comes with tests, written in the same change.
-- A new module gets integration tests that run it the way users do: through the API, with the real database and
-  background jobs, and checking the real output (files, records, responses). Stub only outside services such as AI APIs.
-- Tests only use throwaway local databases and services, never a real system. Each project has a human-owned
-  test guard that stops any other run; never change or work around it.
-- Put tests where AGENTS.md says. A change that touches code but no tests is rejected automatically.
+- Every behaviour change comes with tests in the same change. A change to code without tests is rejected.
+- A new module gets integration tests that run it like a user would (API, real database, jobs) and check the
+  real output. Stub only outside services such as AI APIs.
+- Tests only use throwaway local databases and services. Never change or work around the project's test guard.
 
 ## Skills
 In `.agents/skills/` (also `.claude/skills/`): `code-review`. Use `code-review` before handing over a change.
