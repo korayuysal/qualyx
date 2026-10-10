@@ -22,7 +22,7 @@ Find the real problems a careful reviewer would want fixed before merging. Don't
 Skip anything the linter or formatter already handles, and personal taste.
 
 ## Severity
-- high: breaks something, loses data or opens a security hole. Must be fixed before merging.
+- high: breaks something, loses data or opens a security hole, or a new module has no integration test. Must be fixed before merging.
 - medium: a likely bug, or important behaviour without a test. Should be fixed.
 - low: worth knowing, safe to merge.
 
