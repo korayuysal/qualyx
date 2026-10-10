@@ -64,6 +64,12 @@ These apply to every agent in every project, whatever the tool or model.
 - Never put secrets in code, logs or messages.
 - If something is unclear, ask instead of guessing.
 
+### Testing
+- Every behaviour change comes with tests in the same change. A change to code without tests is rejected.
+- A new module gets integration tests that run it like a user would (API, real database, jobs) and check the
+  real output. Stub only outside services such as AI APIs.
+- Tests only use throwaway local databases and services. Never change or work around the project's test guard.
+
 ## Skills
 In `.agents/skills/` (also `.claude/skills/`): `code-review`. Use `code-review` before handing over a change.
 <!-- /factory:general-rules -->
