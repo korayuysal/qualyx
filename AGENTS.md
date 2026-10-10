@@ -42,3 +42,28 @@ Other packages import `@qualyx/core` from its **build output**: build core befor
 - No skipped tests, `@ts-ignore`, `eslint-disable` or coverage exclusions to make checks pass.
 - Tests must not need the network (they run with `network_mode: none`).
 - Add or update unit tests for every behaviour change.
+
+<!-- factory:general-rules -->
+## General rules
+
+These apply to every agent in every project, whatever the tool or model.
+
+### Writing
+- Never sign your work. No "Co-Authored-By", "Generated with ...", agent or model names, or robot emojis in commits, pull requests, code, comments or docs.
+- Keep it short, in plain words. Write for a busy person.
+  - Commit message: one line on what changed, under 72 characters. Add a short paragraph only if the reason is not obvious.
+  - Pull request: 2 to 5 bullets on what changed, why, and how it was tested. No essays.
+  - Code comments: only when the code can't say it. Explain why, not what.
+- No filler words like "comprehensive", "robust" or "seamlessly".
+
+### Work
+- Read AGENTS.md first and use the project's own commands and conventions.
+- Make the smallest change that solves the task. No unrelated refactors.
+- Never edit human-owned files (acceptance tests, test setup, CI, AGENTS.md, .agents/). If one looks wrong, stop and say so.
+- Never make a check pass by weakening it: no skipped tests, no silenced lint or type errors.
+- Never put secrets in code, logs or messages.
+- If something is unclear, ask instead of guessing.
+
+## Skills
+In `.agents/skills/` (also `.claude/skills/`): `code-review`. Use `code-review` before handing over a change.
+<!-- /factory:general-rules -->
