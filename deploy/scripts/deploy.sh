@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Deploy or update Qualyx on the VPS. Run as the `qualyx` user from $INSTALL_DIR.
-# Pulls latest main, rebuilds images, restarts services.
+# Usage: deploy.sh [commit]. Deploys that commit (CD passes the one that passed the tests), else latest main.
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
@@ -10,10 +10,11 @@ if [ ! -f .env ]; then
   exit 1
 fi
 
-echo "==> Pulling latest from origin/main"
+REF=${1:-origin/main}
+echo "==> Checking out $REF"
 git -C .. fetch --quiet origin main
 git -C .. checkout main
-git -C .. reset --hard origin/main
+git -C .. reset --hard "$REF"
 
 echo "==> Building and restarting services"
 docker compose up -d --build

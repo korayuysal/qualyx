@@ -81,7 +81,9 @@ Visit `https://<DOMAIN>` once DNS has propagated — Caddy will issue a Let's En
 
 ## Updates
 
-GitHub Actions runs `deploy/scripts/deploy.sh` on every push to `main`. It's a thin wrapper around `git pull && docker compose up -d --build`.
+`.github/workflows/deploy.yml` runs on every merge to `main`: the factory's test gates first, then
+`deploy/scripts/deploy.sh <commit>` on the VPS for exactly the tested commit, then a health check on `HEALTH_URL`.
+Rollback: Actions → Deploy → Run workflow with an older commit.
 
 Manual deploy (useful for testing a branch on the VPS):
 
@@ -97,9 +99,11 @@ Configure these on the `production` environment in the GitHub repo settings:
 
 | Secret            | Value                                                        |
 | ----------------- | ------------------------------------------------------------ |
-| `SSH_HOST`        | VPS public IP or hostname                                    |
-| `SSH_USER`        | `qualyx`                                                     |
-| `SSH_PRIVATE_KEY` | Contents of a private key whose public half is in the user's `~/.ssh/authorized_keys` on the VPS |
+| `SSH_TARGET`      | `qualyx@<vps-ip>`                                            |
+| `SSH_PRIVATE_KEY` | A deploy key whose public half is in the user's `~/.ssh/authorized_keys` on the VPS |
+| `SSH_KNOWN_HOSTS` | The VPS host key (`ssh-keyscan <vps-ip>`), so CD never trusts an unknown host |
+
+Plus the variable `HEALTH_URL` (e.g. `https://<DOMAIN>/`). `software-factory/infra/cd/setup-deploy-secrets.sh` sets all four.
 
 ## Debugging
 
