@@ -68,6 +68,8 @@ These apply to every agent in every project, whatever the tool or model.
 - Every behaviour change comes with tests, written in the same change.
 - A new module gets integration tests that run it the way users do: through the API, with the real database and
   background jobs, and checking the real output (files, records, responses). Stub only outside services such as AI APIs.
+- Tests only use throwaway local databases and services, never a real system. Each project has a human-owned
+  test guard that stops any other run; never change or work around it.
 - Put tests where AGENTS.md says. A change that touches code but no tests is rejected automatically.
 
 ## Skills
