@@ -68,11 +68,11 @@ jobs:
           printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/deploy && chmod 600 ~/.ssh/deploy
           printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
           printf 'Host *\n  IdentityFile ~/.ssh/deploy\n  StrictHostKeyChecking yes\n' > ~/.ssh/config
-      # Excluded paths (secrets, Claude credentials, backups) are never sent and never deleted on the server.
+      # Excluded paths (secrets, backups) are never sent and never deleted on the server.
       - name: Ship the tested code
         run: |
           rsync -az --mkpath --delete --exclude .git --exclude node_modules --exclude .next --exclude dist \
-            --exclude /deploy/.env --exclude /deploy/claude-home --exclude /backups ./ "$TARGET:/opt/qualyx/"
+            --exclude /deploy/.env --exclude /backups ./ "$TARGET:/opt/qualyx/"
       - name: Deploy
         run: ssh "$TARGET" bash /opt/qualyx/deploy/scripts/deploy.sh
       - name: Health check
