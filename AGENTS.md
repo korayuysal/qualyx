@@ -37,6 +37,8 @@ Other packages import `@qualyx/core` from its **build output**: build core befor
 
 ## Rules for agents
 
+- Tests only use throwaway local databases and services (compose.test.yml). `test-guard.mjs` stops any test run that
+  points at a real system. It is human-owned: never edit it or work around it.
 - Never edit `tests/acceptance/`, `compose.test.yml`, `Dockerfile.test`, `.github/` or this file: they are
   human-owned. If an acceptance test looks wrong, stop and explain why instead of changing it.
 - No skipped tests, `@ts-ignore`, `eslint-disable` or coverage exclusions to make checks pass.
