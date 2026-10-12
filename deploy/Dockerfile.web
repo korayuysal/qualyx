@@ -13,8 +13,10 @@ RUN --mount=type=cache,target=/root/.npm npm ci
 FROM ${NODE_IMAGE} AS build
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
-COPY package.json package-lock.json tsconfig.json ./
+COPY package.json package-lock.json tsconfig.json tsconfig.base.json ./
 COPY apps/web ./apps/web
+# npm keeps some web dependencies (next-auth) in the workspace folder, not the root one.
+COPY --from=deps /app/apps/web/node_modules ./apps/web/node_modules
 COPY packages/core ./packages/core
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN npm run build -w @qualyx/core && npm run build -w web

@@ -1,26 +1,85 @@
+# Continuous deployment: every merge to main is tested, then deployed, then health-checked.
+# Rollback: Actions -> Deploy -> Run workflow, and enter an older commit.
+# Tests are the software factory's gates (tenants/products/projects/qualyx.yaml); keep them in sync.
+# Runs on the shared server maskly-prod; deploy/scripts/deploy.sh dumps the database and applies new migrations.
+# Setup (once): software-factory/infra/cd/setup-deploy-secrets.sh, see software-factory/docs/CD.md.
 name: Deploy
 
 on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      ref:
+        description: Commit to deploy (an older one rolls back)
+        default: main
 
 concurrency:
   group: deploy-production
   cancel-in-progress: false
 
+permissions:
+  contents: read
+
+env:
+  TEST: docker compose -f compose.test.yml run --rm test sh -c
+
 jobs:
-  deploy:
+  test:
     runs-on: ubuntu-latest
-    environment: production
+    timeout-minutes: 30
+    outputs:
+      sha: ${{ steps.sha.outputs.sha }}
     steps:
-      - name: SSH to VPS and run deploy script
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          script_stop: true
-          script: |
-            cd /opt/qualyx
-            bash deploy/scripts/deploy.sh
+      - uses: actions/checkout@v4
+        with: {ref: "${{ inputs.ref || github.sha }}"}
+      - id: sha
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+      - run: docker compose -f compose.test.yml build test
+      - name: typecheck
+        run: $TEST 'npm run typecheck'
+      - name: unit
+        run: $TEST 'npx vitest run'
+      - name: build
+        run: $TEST 'npm run build -w packages/core -w packages/cli -w packages/worker'
+      - name: web-types
+        run: $TEST 'cd apps/web && npx tsc --noEmit'
+      - name: acceptance
+        run: $TEST 'npx vitest run --config vitest.acceptance.config.ts'
+      - if: always()
+        run: docker compose -f compose.test.yml down -v
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: production
+    env:
+      TARGET: ${{ secrets.SSH_TARGET }}
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: "${{ needs.test.outputs.sha }}"}
+      - name: SSH key and pinned host key
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.SSH_KNOWN_HOSTS }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/deploy && chmod 600 ~/.ssh/deploy
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          printf 'Host *\n  IdentityFile ~/.ssh/deploy\n  StrictHostKeyChecking yes\n' > ~/.ssh/config
+      # Excluded paths (secrets, Claude credentials, backups) are never sent and never deleted on the server.
+      - name: Ship the tested code
+        run: |
+          rsync -az --mkpath --delete --exclude .git --exclude node_modules --exclude .next --exclude dist \
+            --exclude /deploy/.env --exclude /deploy/claude-home --exclude /backups ./ "$TARGET:/opt/qualyx/"
+      - name: Deploy
+        run: ssh "$TARGET" bash /opt/qualyx/deploy/scripts/deploy.sh
+      - name: Health check
+        run: |
+          for i in $(seq 36); do
+            curl -fsS --max-time 5 -o /dev/null "${{ vars.HEALTH_URL }}" && exit 0
+            sleep 5
+          done
+          echo "::error::${{ vars.HEALTH_URL }} not healthy after 3 minutes. Roll back by re-running Deploy with the previous commit."
+          exit 1
