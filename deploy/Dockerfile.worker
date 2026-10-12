@@ -31,7 +31,7 @@ COPY --from=build --chown=pwuser:pwuser /app/node_modules ./node_modules
 COPY --from=build --chown=pwuser:pwuser /app/packages/core ./packages/core
 COPY --from=build --chown=pwuser:pwuser /app/packages/worker ./packages/worker
 
-# Claude Max auth lives at $HOME/.claude — mount /home/pwuser/.claude at runtime.
+# Claude auth: CLAUDE_CODE_OAUTH_TOKEN in the environment (deploy/.env on the server).
 USER pwuser
 
 CMD ["node", "packages/worker/dist/index.js"]

@@ -4,7 +4,7 @@
 set -euo pipefail
 cd "${APP_DIR:-/opt/qualyx}"
 test -f deploy/.env || { echo "deploy/.env is missing (copy in 1Password: qualyx-prod-env)"; exit 1; }
-mkdir -p deploy/claude-home backups
+mkdir -p backups
 C="docker compose --env-file deploy/.env -f deploy/docker-compose.yml"
 SQL="$C exec -T db psql -U qualyx -d qualyx -v ON_ERROR_STOP=1 -qtA"
 

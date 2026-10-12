@@ -28,9 +28,10 @@ forward: to undo one, restore a dump from `/opt/qualyx/backups`.
 
 ## Claude credentials for the worker
 
-The worker runs the Claude CLI with the credentials in `/opt/qualyx/deploy/claude-home/.claude` (never shipped by CD,
-never in the repo). Until they are there, test jobs fail at the Claude step. After copying or rotating them:
-`docker compose --env-file deploy/.env -f deploy/docker-compose.yml restart worker`.
+The worker's Claude CLI logs in with `CLAUDE_CODE_OAUTH_TOKEN` in `deploy/.env` (copy in 1Password:
+`qualyx-claude-oauth-token`). It is a long-lived token on the Max plan, made on the Mac with `claude setup-token`.
+To rotate: make a new token, replace the line in `deploy/.env`, then
+`docker compose --env-file deploy/.env -f deploy/docker-compose.yml up -d worker`.
 
 ## Operations
 

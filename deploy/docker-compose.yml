@@ -40,11 +40,8 @@ services:
     build: {context: .., dockerfile: deploy/Dockerfile.worker}
     restart: unless-stopped
     depends_on: {db: {condition: service_healthy}}
-    env_file: .env
+    env_file: .env  # CLAUDE_CODE_OAUTH_TOKEN logs the Claude CLI in
     environment: *app
-    volumes:
-      # Claude credentials: deploy/claude-home/.claude on the server (see README).
-      - ./claude-home:/home/pwuser:ro
     mem_limit: 3g
     memswap_limit: 3g
     cpus: "2.0"
