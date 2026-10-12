@@ -1,141 +1,44 @@
 # Qualyx Deployment
 
-Production deployment of the Qualyx platform (web + worker + Caddy) on a single Hetzner VPS, using Docker Compose and Supabase for the database.
+Production runs on the shared Hetzner server maskly-prod (with maskly, Lecture Studio and CommMaster) as the
+compose project `qualyx` in `/opt/qualyx`: `web` (Next.js), `worker` (pg-boss + Playwright + Claude CLI), its own
+Postgres `db`, and a nightly `backup`. The server's Caddy (maskly repo, `infra/Caddyfile`) serves
+`https://qualyx.korayuysal.com` and proxies to `qualyx-web`. pg-boss uses the same Postgres; no separate queue.
 
-## Topology
+## Continuous deployment
 
-```
-  Internet
-     │
-     ▼
-  ┌─────────────┐
-  │ Caddy (TLS) │  :80 / :443
-  └──────┬──────┘
-         │
-         ▼
-  ┌──────────┐   ┌──────────┐
-  │ web      │   │ worker   │
-  │ (Next.js)│   │ (pg-boss │
-  │          │   │  + claude│
-  │          │   │  CLI)    │
-  └────┬─────┘   └─────┬────┘
-       │               │
-       └──────┬────────┘
-              │
-              ▼
-      Supabase (Postgres)
-```
+`.github/workflows/deploy.yml`: every merge to main is tested, shipped to `/opt/qualyx` (rsync), and
+`deploy/scripts/deploy.sh` runs on the server: database dump (a failed dump stops the deploy), new migrations, rebuild,
+restart; then a health check. Rollback: Actions -> Deploy -> Run workflow, and enter an older commit. Migrations only go
+forward: to undo one, restore a dump from `/opt/qualyx/backups`.
 
-The web and worker both talk to Supabase. pg-boss rides on the same Postgres — no separate queue broker. The worker shells out to the Claude Code CLI, which authenticates via credentials mounted at `/home/qualyx/.claude` (copied from your laptop's Claude Max login).
+## Migrations
 
-## Prerequisites
+`packages/core/drizzle/*.sql`, applied once each in name order, each in one transaction, recorded in the table
+`schema_migrations`. `0000_baseline.sql` is the full schema (`drizzle-kit export`). For a schema change, edit
+`src/db/schema.ts` and add the matching SQL as a new file that sorts after the existing ones.
 
-- A Hetzner VPS (CX32 or better — 4 vCPU / 8 GB RAM is comfortable headroom for Playwright)
-- Ubuntu 24.04 LTS
-- Root SSH access
-- A domain name you control, with an A record pointing at the VPS public IP
-- The Qualyx Supabase project's connection string (session pooler + direct)
-- Your Claude Max login on your laptop (the `~/.claude/` directory)
+## Server setup (once, done 2026-10-12)
 
-## First-time setup
+- `deploy/.env` (`chmod 600`, copy in 1Password: `qualyx-prod-env`), see `.env.example`.
+- DNS `qualyx.korayuysal.com` -> the server, DNS only; site block in the maskly repo's `infra/Caddyfile`.
+- CD secrets: `software-factory/infra/cd/setup-deploy-secrets.sh korayuysal/qualyx root@91.98.196.67 https://qualyx.korayuysal.com/login`.
+- First user: register with an invite code. Create one on the server:
+  `docker compose --env-file deploy/.env -f deploy/docker-compose.yml exec db psql -U qualyx -c "insert into invite_codes (code) values ('<code>')"`
 
-On the VPS, as root:
+## Claude credentials for the worker
+
+The worker runs the Claude CLI with the credentials in `/opt/qualyx/deploy/claude-home/.claude` (never shipped by CD,
+never in the repo). Until they are there, test jobs fail at the Claude step. After copying or rotating them:
+`docker compose --env-file deploy/.env -f deploy/docker-compose.yml restart worker`.
+
+## Operations
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/korayuysal/qualyx/main/deploy/scripts/bootstrap.sh | bash
-```
-
-That script installs Docker, creates a `qualyx` user, clones the repo to `/opt/qualyx`, and opens ports 22/80/443 via UFW.
-
-From your laptop, copy your Claude Max credentials over:
-
-```bash
-scp -r ~/.claude qualyx@<vps-ip>:/opt/qualyx/deploy/claude-home/
-```
-
-On the VPS, as `qualyx`:
-
-```bash
-cd /opt/qualyx/deploy
-cp .env.example .env
-# edit .env — fill in DOMAIN, DATABASE_URL, DATABASE_URL_DIRECT, AUTH_SECRET
-```
-
-Apply the database schema (first time only, or whenever migrations change):
-
-```bash
-for sql in /opt/qualyx/packages/core/drizzle/*.sql; do
-  psql "$DATABASE_URL_DIRECT" -v ON_ERROR_STOP=1 -f "$sql"
-done
-```
-
-Start everything:
-
-```bash
-cd /opt/qualyx/deploy
-docker compose up -d --build
-docker compose logs -f
-```
-
-Visit `https://<DOMAIN>` once DNS has propagated — Caddy will issue a Let's Encrypt cert automatically.
-
-## Updates
-
-`.github/workflows/deploy.yml` runs on every merge to `main`: the factory's test gates first, then
-`deploy/scripts/deploy.sh <commit>` on the VPS for exactly the tested commit, then a health check on `HEALTH_URL`.
-Rollback: Actions → Deploy → Run workflow with an older commit.
-
-Manual deploy (useful for testing a branch on the VPS):
-
-```bash
-ssh qualyx@<vps-ip>
 cd /opt/qualyx
-bash deploy/scripts/deploy.sh
+C="docker compose --env-file deploy/.env -f deploy/docker-compose.yml"
+$C ps; $C logs -f worker           # status, logs
+$C exec db psql -U qualyx          # SQL
 ```
 
-## GitHub Actions secrets
-
-Configure these on the `production` environment in the GitHub repo settings:
-
-| Secret            | Value                                                        |
-| ----------------- | ------------------------------------------------------------ |
-| `SSH_TARGET`      | `qualyx@<vps-ip>`                                            |
-| `SSH_PRIVATE_KEY` | A deploy key whose public half is in the user's `~/.ssh/authorized_keys` on the VPS |
-| `SSH_KNOWN_HOSTS` | The VPS host key (`ssh-keyscan <vps-ip>`), so CD never trusts an unknown host |
-
-Plus the variable `HEALTH_URL` (e.g. `https://<DOMAIN>/`). `software-factory/infra/cd/setup-deploy-secrets.sh` sets all four.
-
-## Debugging
-
-```bash
-# tail everything
-docker compose logs -f
-
-# one service
-docker compose logs -f worker
-
-# one-off shell inside web
-docker compose exec web sh
-
-# check Caddy config / certs
-docker compose exec caddy caddy validate --config /etc/caddy/Caddyfile
-docker compose exec caddy ls /data/caddy/certificates
-
-# claude auth sanity check from the worker
-docker compose exec worker claude --help
-```
-
-## Claude Max credential rotation
-
-OAuth tokens in `~/.claude/` refresh themselves on use, but they can be revoked server-side. If the worker starts failing with auth errors:
-
-```bash
-# on your laptop — re-login, then resync
-claude login
-scp -r ~/.claude qualyx@<vps-ip>:/opt/qualyx/deploy/claude-home/
-ssh qualyx@<vps-ip> "cd /opt/qualyx/deploy && docker compose restart worker"
-```
-
-## Backups
-
-Supabase handles Postgres backups. The VPS itself is stateless — everything Qualyx writes lives in Postgres (via pg-boss + Drizzle) or in Caddy's TLS cert volumes. Rebuild the box from scratch if it dies.
+Limits so qualyx cannot starve the other apps: worker 2 CPUs / 3 GB, web 768 MB, db 512 MB.

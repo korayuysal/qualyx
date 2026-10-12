@@ -1,7 +1,7 @@
 # Continuous deployment: every merge to main is tested, then deployed, then health-checked.
 # Rollback: Actions -> Deploy -> Run workflow, and enter an older commit.
 # Tests are the software factory's gates (tenants/products/projects/qualyx.yaml); keep them in sync.
-# Database migrations stay manual (deploy/README.md): they run against Supabase, outside this server.
+# Runs on the shared server maskly-prod; deploy/scripts/deploy.sh dumps the database and applies new migrations.
 # Setup (once): software-factory/infra/cd/setup-deploy-secrets.sh, see software-factory/docs/CD.md.
 name: Deploy
 
@@ -54,7 +54,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     environment: production
+    env:
+      TARGET: ${{ secrets.SSH_TARGET }}
     steps:
+      - uses: actions/checkout@v4
+        with: {ref: "${{ needs.test.outputs.sha }}"}
       - name: SSH key and pinned host key
         env:
           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
@@ -63,11 +67,14 @@ jobs:
           install -m 700 -d ~/.ssh
           printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/deploy && chmod 600 ~/.ssh/deploy
           printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
-      # The server checks out exactly the commit that passed the tests, then rebuilds and restarts.
-      - name: Deploy
+          printf 'Host *\n  IdentityFile ~/.ssh/deploy\n  StrictHostKeyChecking yes\n' > ~/.ssh/config
+      # Excluded paths (secrets, Claude credentials, backups) are never sent and never deleted on the server.
+      - name: Ship the tested code
         run: |
-          ssh -i ~/.ssh/deploy -o StrictHostKeyChecking=yes "${{ secrets.SSH_TARGET }}" \
-            "cd /opt/qualyx && bash deploy/scripts/deploy.sh ${{ needs.test.outputs.sha }}"
+          rsync -az --mkpath --delete --exclude .git --exclude node_modules --exclude .next --exclude dist \
+            --exclude /deploy/.env --exclude /deploy/claude-home --exclude /backups ./ "$TARGET:/opt/qualyx/"
+      - name: Deploy
+        run: ssh "$TARGET" bash /opt/qualyx/deploy/scripts/deploy.sh
       - name: Health check
         run: |
           for i in $(seq 36); do
