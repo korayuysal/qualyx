@@ -1,7 +1,10 @@
 # syntax=docker/dockerfile:1.7
-ARG NODE_IMAGE=node:20-bookworm-slim
+ARG NODE_IMAGE=node:24-bookworm-slim
 
 FROM ${NODE_IMAGE} AS deps
+# better-sqlite3 has no prebuilt binary for this Node version: compile it here, where the
+# toolchain stays out of the final image.
+RUN apt-get update && apt-get install -y --no-install-recommends python3 make g++ && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY package.json package-lock.json ./
 COPY apps/web/package.json ./apps/web/
