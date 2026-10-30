@@ -1,5 +1,5 @@
-# Hermetic test image for the software factory's gates (compose.test.yml). Mirrors CI: Node 20, npm ci.
-FROM node:20-bookworm
+# Hermetic test image for the software factory's gates (compose.test.yml). Mirrors CI: Node 24, npm ci.
+FROM node:24-bookworm
 WORKDIR /app
 ENV CI=true NEXT_TELEMETRY_DISABLED=1
 # Manifests first, so dependencies are cached until a lockfile or package.json changes.
