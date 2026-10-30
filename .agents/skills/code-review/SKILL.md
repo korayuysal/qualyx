@@ -15,6 +15,7 @@ Find the real problems a careful reviewer would want fixed before merging. Don't
 ## What to look for, most important first
 1. Correctness: wrong logic, missed edge cases (empty, missing, zero, very large, at the same time), bad error handling, acceptance criteria not met.
 2. Security: missing login or ownership checks, injection, secrets in code or logs, unchecked input, data leaking between users.
+   For anything beyond the obvious, use the `security-audit` skill in guidance mode on the parts the change touches.
 3. Tests: new behaviour without a test, tests that would still pass if the code were wrong, skipped or weakened tests.
 4. Compatibility: database, API or config changes that break existing data or users.
 5. Simplicity: dead code, copy-paste, changes unrelated to the task.
