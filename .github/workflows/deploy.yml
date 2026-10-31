@@ -31,7 +31,7 @@ jobs:
     outputs:
       sha: ${{ steps.sha.outputs.sha }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with: {ref: "${{ inputs.ref || github.sha }}"}
       - id: sha
         run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
@@ -57,7 +57,7 @@ jobs:
     env:
       TARGET: ${{ secrets.SSH_TARGET }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with: {ref: "${{ needs.test.outputs.sha }}"}
       - name: SSH key and pinned host key
         env:
